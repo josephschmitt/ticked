@@ -60,7 +60,8 @@ export function TaskList({
     return (
       <ScrollView
         className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
         }
@@ -81,7 +82,7 @@ export function TaskList({
   return (
     <ScrollView
       className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
-      contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
+      contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />

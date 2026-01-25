@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { Pressable } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Settings } from "lucide-react-native";
@@ -47,17 +46,15 @@ export default function TaskListScreen() {
           ),
         }}
       />
-      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
-        <TaskList
-          groups={groups}
-          isLoading={isLoading}
-          isRefreshing={isRefetching}
-          onRefresh={handleRefresh}
-          error={error instanceof Error ? error : null}
-          doneCount={doneCount}
-          onDonePress={handleOpenDone}
-        />
-      </SafeAreaView>
+      <TaskList
+        groups={groups}
+        isLoading={isLoading}
+        isRefreshing={isRefetching}
+        onRefresh={handleRefresh}
+        error={error instanceof Error ? error : null}
+        doneCount={doneCount}
+        onDonePress={handleOpenDone}
+      />
     </>
   );
 }
