@@ -1,0 +1,94 @@
+import { View, Text, useColorScheme } from "react-native";
+import { CalendarCheck, CalendarClock } from "lucide-react-native";
+import { IOS_COLORS, IOS_GRAYS } from "@/constants/colors";
+
+type DateType = "do" | "due";
+type Urgency = "normal" | "approaching" | "overdue";
+
+interface DateBadgeProps {
+  date: string;
+  type: DateType;
+  isComplete?: boolean;
+  size?: "small" | "medium";
+}
+
+/**
+ * Format a date string for display.
+ * Returns "Today", "Tomorrow", or "Mon 15" format.
+ */
+export function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return "Today";
+  }
+  if (date.toDateString() === tomorrow.toDateString()) {
+    return "Tomorrow";
+  }
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/**
+ * Determine urgency level based on how close/past the date is.
+ */
+export function getDateUrgency(dateStr: string): Urgency {
+  const date = new Date(dateStr);
+  const today = new Date();
+  // Reset time to compare dates only
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 2) return "approaching"; // Today, tomorrow, or day after
+  return "normal";
+}
+
+/**
+ * Get the icon color based on urgency and completion state.
+ */
+function getIconColor(urgency: Urgency, isComplete: boolean, secondaryColor: string): string {
+  if (isComplete) return secondaryColor;
+
+  switch (urgency) {
+    case "overdue":
+      return IOS_COLORS.red;
+    case "approaching":
+      return IOS_COLORS.yellow;
+    default:
+      return secondaryColor;
+  }
+}
+
+/**
+ * Reusable date badge component with urgency-based coloring.
+ *
+ * - "do" dates use CalendarCheck icon, no urgency coloring
+ * - "due" dates use CalendarClock icon, colored by urgency (red=overdue, yellow=approaching)
+ */
+export function DateBadge({ date, type, isComplete = false, size = "small" }: DateBadgeProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const secondaryColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
+  const urgency = getDateUrgency(date);
+  const iconColor = getIconColor(urgency, isComplete, secondaryColor);
+
+  const iconSize = size === "small" ? 12 : 14;
+  const textSize = size === "small" ? "text-[15px]" : "text-[13px]";
+  const Icon = type === "do" ? CalendarCheck : CalendarClock;
+  const displayDate = formatDisplayDate(date);
+
+  return (
+    <View className="flex-row items-center gap-1">
+      <Icon size={iconSize} color={iconColor} strokeWidth={2} />
+      <Text className={`${textSize} text-label-secondary dark:text-label-dark-secondary`}>
+        {displayDate}
+      </Text>
+    </View>
+  );
+}

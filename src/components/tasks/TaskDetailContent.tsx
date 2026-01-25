@@ -1,9 +1,10 @@
 import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator, StyleSheet } from "react-native";
-import { Circle, CheckCircle2, Link as LinkIcon, Calendar, FolderOpen, Tag } from "lucide-react-native";
+import { Circle, CheckCircle2, Link as LinkIcon, FolderOpen, Tag } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import type { Task } from "@/types/task";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import { MarkdownContent } from "@/components/notion/MarkdownContent";
+import { DateBadge } from "@/components/ui/DateBadge";
 import { RelationBadge } from "@/components/ui/RelationBadge";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
@@ -33,19 +34,8 @@ export function TaskDetailContent({
     ? (isDark ? NOTION_COLORS[statusColorKey].dark : NOTION_COLORS[statusColorKey].light)
     : (isDark ? NOTION_COLORS.default.dark : NOTION_COLORS.default.light);
 
-  // Format date for display
-  const formatDate = (dateStr: string | undefined) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-    });
-  };
-
-  const displayDate = formatDate(task.doDate) || formatDate(task.dueDate);
   const checkboxColor = isComplete ? BRAND_COLORS.primary : (isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3);
+  const secondaryColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
   const handleOpenUrl = () => {
     if (task.url) {
@@ -112,29 +102,40 @@ export function TaskDetailContent({
           </View>
         )}
 
-        {/* Date */}
-        {displayDate && (
+        {/* Dates */}
+        {task.doDate && (
           <View className="flex-row items-center px-2 py-1">
-            <Calendar size={14} color={isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system} strokeWidth={2} />
-            <Text className="ml-1 text-[13px] text-label-secondary dark:text-label-dark-secondary">
-              {displayDate}
-            </Text>
+            <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="medium" />
           </View>
         )}
-
-        {/* URL link */}
-        {task.url && (
-          <Pressable
-            onPress={handleOpenUrl}
-            className="flex-row items-center px-2 py-1 active:opacity-70"
-          >
-            <LinkIcon size={14} color={BRAND_COLORS.primary} strokeWidth={2} />
-            <Text className="ml-1 text-[13px]" style={{ color: BRAND_COLORS.primary }}>
-              Link
-            </Text>
-          </Pressable>
+        {task.dueDate && (
+          <View className="flex-row items-center px-2 py-1">
+            <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="medium" />
+          </View>
         )}
       </View>
+
+      {/* URL row */}
+      {task.url && (
+        <Pressable
+          onPress={handleOpenUrl}
+          className={`flex-row items-center mb-4 ml-10 active:opacity-70 ${isComplete ? 'opacity-60' : ''}`}
+        >
+          <LinkIcon
+            size={14}
+            color={secondaryColor}
+            strokeWidth={2}
+            style={{ flexShrink: 0 }}
+          />
+          <Text
+            className="text-[13px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {task.url}
+          </Text>
+        </Pressable>
+      )}
 
       {/* Divider */}
       <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
