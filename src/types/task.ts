@@ -7,6 +7,8 @@ export interface Task {
   doDate?: string;
   dueDate?: string;
   url?: string;
+  creationDate?: string;
+  completedDate?: string;
   // Notion metadata
   notionUrl: string;
   lastEditedTime: string;

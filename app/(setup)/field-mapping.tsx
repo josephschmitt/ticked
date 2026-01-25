@@ -26,6 +26,8 @@ const FIELD_ORDER: AppField[] = [
   "doDate",
   "dueDate",
   "url",
+  "creationDate",
+  "completedDate",
 ];
 
 export default function FieldMappingScreen() {

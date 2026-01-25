@@ -9,6 +9,8 @@ export interface FieldMapping {
   doDate?: string; // Date property ID
   dueDate?: string; // Date property ID
   url?: string; // URL property ID
+  creationDate?: string; // Created time or Date property ID
+  completedDate?: string; // Date property ID
 }
 
 export type AppField = keyof FieldMapping;
@@ -63,5 +65,17 @@ export const APP_FIELD_CONFIG: Record<
     description: "Related link",
     required: false,
     allowedTypes: ["url"],
+  },
+  creationDate: {
+    label: "Creation Date",
+    description: "When the task was created",
+    required: false,
+    allowedTypes: ["created_time", "date"],
+  },
+  completedDate: {
+    label: "Completed Date",
+    description: "When the task was completed",
+    required: false,
+    allowedTypes: ["date"],
   },
 };

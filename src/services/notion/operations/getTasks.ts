@@ -5,6 +5,7 @@ import type { FieldMapping } from "@/types/fieldMapping";
 interface PageResult {
   id: string;
   url: string;
+  created_time: string;
   last_edited_time: string;
   properties: Record<string, PropertyValue>;
 }
@@ -20,6 +21,7 @@ interface PropertyValue {
   date?: { start: string; end: string | null } | null;
   url?: string | null;
   relation?: Array<{ id: string }>;
+  created_time?: string;
 }
 
 interface QueryResponse {
@@ -63,7 +65,7 @@ function inferStatusGroup(statusName: string): StatusGroup {
  */
 function extractPropertyValue(
   property: PropertyValue | undefined,
-  type: "title" | "text" | "select" | "status" | "checkbox" | "date" | "url" | "relation"
+  type: "title" | "text" | "select" | "status" | "checkbox" | "date" | "url" | "relation" | "created_time"
 ): string | boolean | null {
   if (!property) return null;
 
@@ -84,6 +86,8 @@ function extractPropertyValue(
       return property.url || null;
     case "relation":
       return property.relation?.[0]?.id || null;
+    case "created_time":
+      return property.created_time || null;
     default:
       return null;
   }
@@ -168,6 +172,21 @@ function pageToTask(
     ? (extractPropertyValue(propertyMap.get(fieldMapping.url), "url") as string | null)
     : undefined;
 
+  // Get creation date - can be from created_time property or date property
+  let creationDate: string | null | undefined;
+  if (fieldMapping.creationDate) {
+    const creationProp = propertyMap.get(fieldMapping.creationDate);
+    if (creationProp?.type === "created_time") {
+      creationDate = extractPropertyValue(creationProp, "created_time") as string | null;
+    } else {
+      creationDate = extractPropertyValue(creationProp, "date") as string | null;
+    }
+  }
+
+  const completedDate = fieldMapping.completedDate
+    ? (extractPropertyValue(propertyMap.get(fieldMapping.completedDate), "date") as string | null)
+    : undefined;
+
   return {
     id: page.id,
     title,
@@ -177,6 +196,8 @@ function pageToTask(
     doDate: doDate || undefined,
     dueDate: dueDate || undefined,
     url: url || undefined,
+    creationDate: creationDate || undefined,
+    completedDate: completedDate || undefined,
     notionUrl: page.url,
     lastEditedTime: page.last_edited_time,
   };
