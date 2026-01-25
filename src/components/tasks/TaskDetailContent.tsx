@@ -59,7 +59,7 @@ export function TaskDetailContent({
   const contentPreview = blocks ? getContentPreview(blocks, 150) : "";
 
   return (
-    <View className="flex-1 px-4 pt-4">
+    <View className="flex-1 px-6 pt-6">
       {/* Title with checkbox */}
       <View className="flex-row items-start mb-4">
         <View className="w-8 h-8 items-center justify-center mt-0.5">
