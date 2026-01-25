@@ -26,11 +26,11 @@ interface NotionDatabaseResult {
 export async function getDatabases(): Promise<NotionDatabase[]> {
   const client = getNotionClient();
 
-  // Use search to find databases - cast through unknown to handle SDK type limitations
+  // Search for databases - Notion API now uses "data_source" instead of "database"
   const response = (await client.search({
     filter: {
       property: "object",
-      value: "database" as "page", // SDK typing is incorrect, "database" is valid
+      value: "data_source" as "page", // SDK typing is outdated, "data_source" filters for databases
     },
     sort: {
       direction: "descending",
@@ -39,8 +39,9 @@ export async function getDatabases(): Promise<NotionDatabase[]> {
   })) as unknown as { results: NotionDatabaseResult[] };
 
   // Filter to only include full database objects
+  // Note: Notion API now returns "data_source" instead of "database" for object type
   const databases = response.results.filter(
-    (result) => result.object === "database" && "title" in result
+    (result) => (result.object === "database" || result.object === "data_source") && "title" in result
   );
 
   return databases.map((db) => {
