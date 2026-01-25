@@ -48,9 +48,9 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(setup)" options={{ headerShown: false }} />
-          <Stack.Screen name="(main)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(setup)" />
+          <Stack.Screen name="(main)" />
         </Stack>
       </QueryClientProvider>
     </ErrorBoundary>

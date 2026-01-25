@@ -8,14 +8,8 @@ export default function SetupLayout() {
         headerBackTitle: "Back",
       }}
     >
-      <Stack.Screen
-        name="databases"
-        options={{ title: "Select Database" }}
-      />
-      <Stack.Screen
-        name="field-mapping"
-        options={{ title: "Configure Fields" }}
-      />
+      <Stack.Screen name="databases" options={{ title: "Select Database" }} />
+      <Stack.Screen name="field-mapping" options={{ title: "Configure Fields" }} />
     </Stack>
   );
 }

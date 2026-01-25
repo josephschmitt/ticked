@@ -1,7 +1,7 @@
 {
-  "name": "notion-todos-native",
+  "name": "ticked",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -13,6 +13,7 @@
     "@notionhq/client": "^5.8.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@tanstack/react-query": "^5.90.20",
+    "babel-preset-expo": "^54.0.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "~54.0.32",
@@ -30,9 +31,11 @@
     "nativewind": "^4.2.1",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-reanimated": "^4.2.1",
+    "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-svg": "^15.15.1",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "^15.12.1",
+    "react-native-worklets": "^0.5.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^3.4.19",
     "zustand": "^5.0.10"
