@@ -1,9 +1,13 @@
+import type { DatabaseIcon } from "./database";
+
 export interface Task {
   id: string;
   title: string;
   status: TaskStatus;
   taskType?: string;
+  taskTypeIcon?: DatabaseIcon | null;
   project?: string;
+  projectIcon?: DatabaseIcon | null;
   doDate?: string;
   dueDate?: string;
   url?: string;

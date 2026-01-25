@@ -1,10 +1,11 @@
 import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator } from "react-native";
-import { Circle, CheckCircle2, Link as LinkIcon, Calendar, FolderOpen } from "lucide-react-native";
+import { Circle, CheckCircle2, Link as LinkIcon, Calendar, FolderOpen, Tag } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import type { Task } from "@/types/task";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import { getContentPreview } from "@/services/notion/operations/getPageContent";
 import { BlockListRenderer } from "@/components/notion/BlockRenderer";
+import { RelationBadge } from "@/components/ui/RelationBadge";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
 interface TaskDetailContentProps {
@@ -91,13 +92,27 @@ export function TaskDetailContent({
           </Text>
         </View>
 
+        {/* Task Type */}
+        {task.taskType && (
+          <View className="flex-row items-center px-2 py-1">
+            <RelationBadge
+              name={task.taskType}
+              icon={task.taskTypeIcon}
+              fallbackIcon={Tag}
+              size="medium"
+            />
+          </View>
+        )}
+
         {/* Project */}
         {task.project && (
           <View className="flex-row items-center px-2 py-1">
-            <FolderOpen size={14} color={isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system} strokeWidth={2} />
-            <Text className="ml-1 text-[13px] text-label-secondary dark:text-label-dark-secondary">
-              {task.project}
-            </Text>
+            <RelationBadge
+              name={task.project}
+              icon={task.projectIcon}
+              fallbackIcon={FolderOpen}
+              size="medium"
+            />
           </View>
         )}
 

@@ -1,10 +1,10 @@
-import { View, Text, Pressable, Linking } from "react-native";
+import { View, Text, Pressable, Linking, useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Circle, CheckCircle2, ChevronRight, Link } from "lucide-react-native";
+import { Circle, CheckCircle2, ChevronRight, Link, FolderOpen } from "lucide-react-native";
 import { router } from "expo-router";
 import type { Task } from "@/types/task";
+import { RelationBadge } from "@/components/ui/RelationBadge";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
-import { useColorScheme } from "react-native";
 
 interface TaskRowProps {
   task: Task;
@@ -65,11 +65,8 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const displayDate = formatDate(task.doDate) || formatDate(task.dueDate);
   const isComplete = task.status.group === "complete";
 
-  // Build metadata string (project · date · link indicator)
-  const metaParts: string[] = [];
-  if (task.project) metaParts.push(task.project);
-  if (displayDate) metaParts.push(displayDate);
-  const metaString = metaParts.join(" · ");
+  // Check if we have metadata to display
+  const hasMetadata = task.project || displayDate || task.url;
 
   // Build accessibility label
   const accessibilityParts = [task.title, `Status: ${task.status.name}`];
@@ -127,11 +124,24 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
           </Text>
 
           {/* Meta row */}
-          {(metaString || task.url) && (
+          {hasMetadata && (
             <View className="flex-row items-center mt-0.5" accessible={false}>
-              {metaString && (
+              {task.project && (
+                <RelationBadge
+                  name={task.project}
+                  icon={task.projectIcon}
+                  fallbackIcon={FolderOpen}
+                  size="small"
+                />
+              )}
+              {task.project && displayDate && (
+                <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary mx-1">
+                  ·
+                </Text>
+              )}
+              {displayDate && (
                 <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary">
-                  {metaString}
+                  {displayDate}
                 </Text>
               )}
               {task.url && (
@@ -139,7 +149,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
                   size={12}
                   color={linkColor}
                   strokeWidth={2}
-                  style={{ marginLeft: metaString ? 6 : 0 }}
+                  style={{ marginLeft: (task.project || displayDate) ? 6 : 0 }}
                 />
               )}
             </View>

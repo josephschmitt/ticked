@@ -1,6 +1,7 @@
 import { getNotionClient } from "../client";
 import type { Task, TaskStatus, StatusGroup } from "@/types/task";
 import type { FieldMapping } from "@/types/fieldMapping";
+import type { DatabaseIcon } from "@/types/database";
 
 interface PageResult {
   id: string;
@@ -38,7 +39,23 @@ export interface PaginatedTasksResult {
 
 interface PageTitleResponse {
   id: string;
+  icon: {
+    type: "emoji" | "external" | "file";
+    emoji?: string;
+    external?: { url: string };
+    file?: { url: string };
+  } | null;
   properties: Record<string, { type: string; title?: Array<{ plain_text: string }> }>;
+}
+
+interface PageInfo {
+  title: string;
+  icon: DatabaseIcon | null;
+}
+
+interface RelationResult {
+  name: string;
+  icon: DatabaseIcon | null;
 }
 
 /**
@@ -100,17 +117,18 @@ function extractPropertyValue(
 }
 
 /**
- * Get a relation value, resolving the ID to a title if available.
+ * Get a relation value, resolving the ID to title and icon if available.
  */
 function getRelationValue(
   property: PropertyValue | undefined,
-  relationTitles: Map<string, string>
-): string | null {
+  relationInfos: Map<string, PageInfo>
+): RelationResult | null {
   if (!property || property.type !== "relation" || !property.relation?.[0]) {
     return null;
   }
   const relationId = property.relation[0].id;
-  return relationTitles.get(relationId) || null;
+  const info = relationInfos.get(relationId);
+  return info ? { name: info.title, icon: info.icon } : null;
 }
 
 /**
@@ -120,7 +138,7 @@ function pageToTask(
   page: PageResult,
   fieldMapping: FieldMapping,
   propertyMap: Map<string, PropertyValue>,
-  relationTitles: Map<string, string>
+  relationInfos: Map<string, PageInfo>
 ): Task | null {
   // Get title (required)
   const titleProp = propertyMap.get(fieldMapping.taskName);
@@ -153,18 +171,30 @@ function pageToTask(
 
   // Get optional fields - handle both select and relation types
   const taskTypeProp = fieldMapping.taskType ? propertyMap.get(fieldMapping.taskType) : undefined;
-  const taskType = taskTypeProp
-    ? taskTypeProp.type === "relation"
-      ? getRelationValue(taskTypeProp, relationTitles)
-      : (extractPropertyValue(taskTypeProp, "select") as string | null)
-    : undefined;
+  let taskType: string | undefined;
+  let taskTypeIcon: DatabaseIcon | null | undefined;
+  if (taskTypeProp) {
+    if (taskTypeProp.type === "relation") {
+      const relationResult = getRelationValue(taskTypeProp, relationInfos);
+      taskType = relationResult?.name;
+      taskTypeIcon = relationResult?.icon;
+    } else {
+      taskType = extractPropertyValue(taskTypeProp, "select") as string | null ?? undefined;
+    }
+  }
 
   const projectProp = fieldMapping.project ? propertyMap.get(fieldMapping.project) : undefined;
-  const project = projectProp
-    ? projectProp.type === "relation"
-      ? getRelationValue(projectProp, relationTitles)
-      : (extractPropertyValue(projectProp, "select") as string | null)
-    : undefined;
+  let project: string | undefined;
+  let projectIcon: DatabaseIcon | null | undefined;
+  if (projectProp) {
+    if (projectProp.type === "relation") {
+      const relationResult = getRelationValue(projectProp, relationInfos);
+      project = relationResult?.name;
+      projectIcon = relationResult?.icon;
+    } else {
+      project = extractPropertyValue(projectProp, "select") as string | null ?? undefined;
+    }
+  }
 
   const doDate = fieldMapping.doDate
     ? (extractPropertyValue(propertyMap.get(fieldMapping.doDate), "date") as string | null)
@@ -198,7 +228,9 @@ function pageToTask(
     title,
     status,
     taskType: taskType || undefined,
+    taskTypeIcon: taskTypeIcon,
     project: project || undefined,
+    projectIcon: projectIcon,
     doDate: doDate || undefined,
     dueDate: dueDate || undefined,
     url: url || undefined,
@@ -210,9 +242,9 @@ function pageToTask(
 }
 
 /**
- * Fetch the title of a page by ID.
+ * Fetch the title and icon of a page by ID.
  */
-async function getPageTitle(pageId: string): Promise<string | null> {
+async function getPageInfo(pageId: string): Promise<PageInfo | null> {
   const client = getNotionClient();
 
   try {
@@ -221,39 +253,56 @@ async function getPageTitle(pageId: string): Promise<string | null> {
     })) as unknown as PageTitleResponse;
 
     // Find the title property (it's always type "title")
+    let title: string | null = null;
     for (const prop of Object.values(page.properties)) {
       if (prop.type === "title" && prop.title) {
-        return prop.title.map((t) => t.plain_text).join("") || null;
+        title = prop.title.map((t) => t.plain_text).join("") || null;
+        break;
       }
     }
-    return null;
+
+    if (!title) return null;
+
+    // Transform icon to DatabaseIcon format
+    let icon: DatabaseIcon | null = null;
+    if (page.icon) {
+      if (page.icon.type === "emoji" && page.icon.emoji) {
+        icon = { type: "emoji", emoji: page.icon.emoji };
+      } else if (page.icon.type === "external" && page.icon.external) {
+        icon = { type: "external", external: { url: page.icon.external.url } };
+      } else if (page.icon.type === "file" && page.icon.file) {
+        icon = { type: "file", file: { url: page.icon.file.url } };
+      }
+    }
+
+    return { title, icon };
   } catch {
-    console.warn(`Failed to fetch page title for ${pageId}`);
+    console.warn(`Failed to fetch page info for ${pageId}`);
     return null;
   }
 }
 
 /**
- * Batch fetch page titles for multiple IDs.
+ * Batch fetch page info (title and icon) for multiple IDs.
  */
-async function getPageTitles(pageIds: string[]): Promise<Map<string, string>> {
-  const titles = new Map<string, string>();
+async function getPageInfos(pageIds: string[]): Promise<Map<string, PageInfo>> {
+  const infos = new Map<string, PageInfo>();
 
   // Fetch in parallel with a reasonable batch size
   const results = await Promise.all(
     pageIds.map(async (id) => {
-      const title = await getPageTitle(id);
-      return { id, title };
+      const info = await getPageInfo(id);
+      return { id, info };
     })
   );
 
-  for (const { id, title } of results) {
-    if (title) {
-      titles.set(id, title);
+  for (const { id, info } of results) {
+    if (info) {
+      infos.set(id, info);
     }
   }
 
-  return titles;
+  return infos;
 }
 
 /**
@@ -296,12 +345,12 @@ export async function getTasks(
     }
   }
 
-  // Fetch titles for all related pages
-  const relationTitles = relationIds.size > 0
-    ? await getPageTitles(Array.from(relationIds))
-    : new Map<string, string>();
+  // Fetch info for all related pages
+  const relationInfos = relationIds.size > 0
+    ? await getPageInfos(Array.from(relationIds))
+    : new Map<string, PageInfo>();
 
-  // Second pass: build tasks with resolved relation titles
+  // Second pass: build tasks with resolved relation info
   const tasks: Task[] = [];
 
   for (const page of response.results) {
@@ -314,7 +363,7 @@ export async function getTasks(
       }
     }
 
-    const task = pageToTask(page, fieldMapping, propertyMap, relationTitles);
+    const task = pageToTask(page, fieldMapping, propertyMap, relationInfos);
     if (task) {
       tasks.push(task);
     }
@@ -375,12 +424,12 @@ export async function getTasksPaginated(
     }
   }
 
-  // Fetch titles for all related pages
-  const relationTitles = relationIds.size > 0
-    ? await getPageTitles(Array.from(relationIds))
-    : new Map<string, string>();
+  // Fetch info for all related pages
+  const relationInfos = relationIds.size > 0
+    ? await getPageInfos(Array.from(relationIds))
+    : new Map<string, PageInfo>();
 
-  // Second pass: build tasks with resolved relation titles
+  // Second pass: build tasks with resolved relation info
   const tasks: Task[] = [];
 
   for (const page of response.results) {
@@ -391,7 +440,7 @@ export async function getTasksPaginated(
       }
     }
 
-    const task = pageToTask(page, fieldMapping, propertyMap, relationTitles);
+    const task = pageToTask(page, fieldMapping, propertyMap, relationInfos);
     if (task) {
       tasks.push(task);
     }
