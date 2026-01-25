@@ -1,6 +1,6 @@
 import { View, Text, Pressable, Linking, useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Circle, CheckCircle2, ChevronRight, Link, FolderOpen } from "lucide-react-native";
+import { Circle, CheckCircle2, Link, FolderOpen, Tag } from "lucide-react-native";
 import { router } from "expo-router";
 import type { Task } from "@/types/task";
 import { RelationBadge } from "@/components/ui/RelationBadge";
@@ -76,7 +76,6 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const accessibilityLabel = accessibilityParts.join(". ");
 
   const checkboxColor = isComplete ? BRAND_COLORS.primary : (isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3);
-  const chevronColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3;
   const linkColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
   return (
@@ -86,10 +85,10 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      {/* Checkbox - separate touch target, aligned to first line of title */}
+      {/* Checkbox column - includes checkbox and optional task type icon */}
       <Pressable
         onPress={handleCheckboxPress}
-        className="pl-6 pt-3 pb-3 pr-1 min-h-[44px] items-center"
+        className="flex-row pl-6 pt-3 pb-3 pr-2 min-h-[44px] items-center gap-2"
         accessibilityLabel={isComplete ? "Mark incomplete" : "Mark complete"}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isComplete }}
@@ -101,6 +100,11 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
             <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
           )}
         </View>
+        {task.taskType && task.taskTypeIcon && (
+          <View className="h-6 items-center justify-center opacity-75">
+            <RelationBadge icon={task.taskTypeIcon} fallbackIcon={Tag} size="large" />
+          </View>
+        )}
       </Pressable>
 
       {/* Content - opens task detail */}
@@ -110,7 +114,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
         className="flex-1 flex-row items-start py-3 pr-6 min-h-[44px] active:opacity-70"
         accessibilityHint="Tap to view details, long press to open in Notion"
       >
-        <View className="flex-1 ml-2">
+        <View className="flex-1">
           <Text
             className={`text-[17px] leading-tight ${
               isComplete
@@ -154,11 +158,6 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
               )}
             </View>
           )}
-        </View>
-
-        {/* Disclosure indicator - aligned with first line of text */}
-        <View className="mt-0.5">
-          <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
         </View>
       </Pressable>
     </View>

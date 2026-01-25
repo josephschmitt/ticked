@@ -5,10 +5,10 @@ import type { DatabaseIcon } from "@/types/database";
 import { IOS_GRAYS } from "@/constants/colors";
 
 interface RelationBadgeProps {
-  name: string;
+  name?: string;
   icon?: DatabaseIcon | null;
   fallbackIcon: LucideIcon;
-  size?: "small" | "medium";
+  size?: "small" | "medium" | "large";
 }
 
 /**
@@ -26,8 +26,8 @@ export function RelationBadge({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const iconSize = size === "small" ? 14 : 16;
-  const emojiSize = size === "small" ? "text-[12px]" : "text-[14px]";
+  const iconSize = size === "small" ? 14 : size === "medium" ? 16 : 22;
+  const emojiSize = size === "small" ? "text-[12px]" : size === "medium" ? "text-[14px]" : "text-[20px]";
   const textSize = size === "small" ? "text-[15px]" : "text-[13px]";
   const iconColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
@@ -45,7 +45,7 @@ export function RelationBadge({
       (icon.external?.url || icon.file?.url)
     ) {
       const imageUrl = icon.external?.url || icon.file?.url;
-      const imageDimension = size === "small" ? 14 : 16;
+      const imageDimension = size === "small" ? 14 : size === "medium" ? 16 : 22;
       const isSvg = imageUrl?.toLowerCase().endsWith(".svg");
 
       return (
@@ -65,11 +65,13 @@ export function RelationBadge({
   return (
     <View className="flex-row items-center">
       {renderIcon()}
-      <Text
-        className={`ml-1 ${textSize} text-label-secondary dark:text-label-dark-secondary`}
-      >
-        {name}
-      </Text>
+      {name && (
+        <Text
+          className={`ml-1 ${textSize} text-label-secondary dark:text-label-dark-secondary`}
+        >
+          {name}
+        </Text>
+      )}
     </View>
   );
 }
