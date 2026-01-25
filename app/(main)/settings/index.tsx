@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   useColorScheme,
+  ActionSheetIOS,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Stack } from "expo-router";
@@ -138,6 +140,8 @@ export default function SettingsScreen() {
   const customListName = useConfigStore((state) => state.customListName);
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
   const setShowTaskTypeInline = useConfigStore((state) => state.setShowTaskTypeInline);
+  const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
+  const setApproachingDaysThreshold = useConfigStore((state) => state.setApproachingDaysThreshold);
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
@@ -158,6 +162,52 @@ export default function SettingsScreen() {
     Haptics.selectionAsync();
     setShowTaskTypeInline(value);
   }, [setShowTaskTypeInline]);
+
+  const approachingDaysOptions = [
+    { label: "Same day only", value: 0 },
+    { label: "1 day", value: 1 },
+    { label: "2 days", value: 2 },
+    { label: "3 days", value: 3 },
+    { label: "5 days", value: 5 },
+    { label: "1 week", value: 7 },
+  ];
+
+  const getApproachingDaysLabel = (days: number) => {
+    const option = approachingDaysOptions.find(o => o.value === days);
+    return option?.label || `${days} days`;
+  };
+
+  const handleChangeApproachingDays = useCallback(() => {
+    Haptics.selectionAsync();
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...approachingDaysOptions.map(o => o.label), "Cancel"],
+          cancelButtonIndex: approachingDaysOptions.length,
+          title: "Upcoming Warning Threshold",
+          message: "Show dates in yellow when they are within this time range",
+        },
+        (buttonIndex) => {
+          if (buttonIndex < approachingDaysOptions.length) {
+            setApproachingDaysThreshold(approachingDaysOptions[buttonIndex].value);
+          }
+        }
+      );
+    } else {
+      // For Android, use Alert with buttons as a fallback
+      Alert.alert(
+        "Upcoming Warning Threshold",
+        "Show dates in yellow when they are within this time range",
+        [
+          ...approachingDaysOptions.map((option) => ({
+            text: option.label,
+            onPress: () => setApproachingDaysThreshold(option.value),
+          })),
+          { text: "Cancel", style: "cancel" as const },
+        ]
+      );
+    }
+  }, [setApproachingDaysThreshold]);
 
   const handleDismiss = useCallback(() => {
     Haptics.selectionAsync();
@@ -266,6 +316,11 @@ export default function SettingsScreen() {
             label="Show Task Type Inline"
             value={showTaskTypeInline}
             onValueChange={handleToggleTaskTypeInline}
+          />
+          <SettingsRow
+            label="Upcoming Warning"
+            value={getApproachingDaysLabel(approachingDaysThreshold)}
+            onPress={handleChangeApproachingDays}
             isLast
           />
         </SettingsSection>

@@ -8,6 +8,8 @@ import {
   getCustomListName,
   storeShowTaskTypeInline,
   getShowTaskTypeInline,
+  storeApproachingDaysThreshold,
+  getApproachingDaysThreshold,
   clearAllConfig,
 } from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
@@ -18,12 +20,14 @@ interface ConfigState {
   customListName: string | null;
   fieldMapping: FieldMapping | null;
   showTaskTypeInline: boolean;
+  approachingDaysThreshold: number;
   isConfigured: boolean;
   isLoading: boolean;
   setDatabase: (id: string, name: string) => Promise<void>;
   setCustomListName: (name: string | null) => Promise<void>;
   setFieldMapping: (mapping: FieldMapping) => Promise<void>;
   setShowTaskTypeInline: (show: boolean) => Promise<void>;
+  setApproachingDaysThreshold: (days: number) => Promise<void>;
   clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   hydrate: () => Promise<void>;
@@ -35,6 +39,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   customListName: null,
   fieldMapping: null,
   showTaskTypeInline: true,
+  approachingDaysThreshold: 2,
   isConfigured: false,
   isLoading: true,
 
@@ -76,6 +81,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     set({ showTaskTypeInline: show });
   },
 
+  setApproachingDaysThreshold: async (days) => {
+    // Store in async storage
+    await storeApproachingDaysThreshold(days);
+
+    // Update state
+    set({ approachingDaysThreshold: days });
+  },
+
   clearConfig: async () => {
     // Clear from async storage
     await clearAllConfig();
@@ -94,11 +107,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [dbConfig, customListName, fieldMapping, showTaskTypeInline] = await Promise.all([
+      const [dbConfig, customListName, fieldMapping, showTaskTypeInline, approachingDaysThreshold] = await Promise.all([
         getDatabaseConfig(),
         getCustomListName(),
         getFieldMapping(),
         getShowTaskTypeInline(),
+        getApproachingDaysThreshold(),
       ]);
 
       const isConfigured = !!(
@@ -113,6 +127,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         customListName,
         fieldMapping,
         showTaskTypeInline,
+        approachingDaysThreshold,
         isConfigured,
         isLoading: false,
       });

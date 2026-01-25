@@ -6,6 +6,7 @@ import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import { MarkdownContent } from "@/components/notion/MarkdownContent";
 import { DateBadge } from "@/components/ui/DateBadge";
 import { RelationBadge } from "@/components/ui/RelationBadge";
+import { useConfigStore } from "@/stores/configStore";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
 interface TaskDetailContentProps {
@@ -27,6 +28,7 @@ export function TaskDetailContent({
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
 
   const isComplete = task.status.group === "complete";
   const statusColorKey = task.status.color as NotionColor;
@@ -108,12 +110,12 @@ export function TaskDetailContent({
             {/* Dates */}
             {task.doDate && (
               <View className="flex-row items-center px-1 py-1">
-                <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="medium" />
+                <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="medium" approachingDaysThreshold={approachingDaysThreshold} />
               </View>
             )}
             {task.dueDate && (
               <View className="flex-row items-center px-1 py-1">
-                <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="medium" />
+                <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="medium" approachingDaysThreshold={approachingDaysThreshold} />
               </View>
             )}
             {/* URL (flexible, clips with ellipsis) */}

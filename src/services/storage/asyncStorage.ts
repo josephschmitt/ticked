@@ -130,6 +130,26 @@ export async function getShowTaskTypeInline(): Promise<boolean> {
 }
 
 /**
+ * Store approaching days threshold preference.
+ */
+export async function storeApproachingDaysThreshold(days: number): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.APPROACHING_DAYS_THRESHOLD, JSON.stringify(days));
+}
+
+/**
+ * Get approaching days threshold preference (defaults to 2).
+ */
+export async function getApproachingDaysThreshold(): Promise<number> {
+  const value = await getAsyncItem(ASYNC_STORAGE_KEYS.APPROACHING_DAYS_THRESHOLD);
+  if (value === null) return 2; // Default to 2 days
+  try {
+    return JSON.parse(value) as number;
+  } catch {
+    return 2;
+  }
+}
+
+/**
  * Clear all configuration (used when signing out or reconfiguring).
  */
 export async function clearAllConfig(): Promise<void> {

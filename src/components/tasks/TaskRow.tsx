@@ -19,6 +19,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
+  const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
 
   // Content area tap - opens task detail sheet
   const handleContentPress = () => {
@@ -150,10 +151,10 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
               {(task.doDate || task.dueDate) && (
                 <View className="flex-row items-center flex-shrink-0 ml-auto gap-2">
                   {task.doDate && (
-                    <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="small" />
+                    <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="small" approachingDaysThreshold={approachingDaysThreshold} />
                   )}
                   {task.dueDate && (
-                    <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="small" />
+                    <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="small" approachingDaysThreshold={approachingDaysThreshold} />
                   )}
                 </View>
               )}

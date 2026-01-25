@@ -10,6 +10,7 @@ interface DateBadgeProps {
   type: DateType;
   isComplete?: boolean;
   size?: "small" | "medium";
+  approachingDaysThreshold?: number;
 }
 
 /**
@@ -33,8 +34,10 @@ export function formatDisplayDate(dateStr: string): string {
 
 /**
  * Determine urgency level based on how close/past the date is.
+ * @param dateStr - The date string to check
+ * @param approachingThreshold - Number of days to consider "approaching" (default: 2)
  */
-export function getDateUrgency(dateStr: string): Urgency {
+export function getDateUrgency(dateStr: string, approachingThreshold: number = 2): Urgency {
   const date = new Date(dateStr);
   const today = new Date();
   // Reset time to compare dates only
@@ -44,7 +47,7 @@ export function getDateUrgency(dateStr: string): Urgency {
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return "overdue";
-  if (diffDays <= 2) return "approaching"; // Today, tomorrow, or day after
+  if (diffDays <= approachingThreshold) return "approaching";
   return "normal";
 }
 
@@ -70,12 +73,12 @@ function getIconColor(urgency: Urgency, isComplete: boolean, secondaryColor: str
  * - "do" dates use CalendarCheck icon, no urgency coloring
  * - "due" dates use CalendarClock icon, colored by urgency (red=overdue, yellow=approaching)
  */
-export function DateBadge({ date, type, isComplete = false, size = "small" }: DateBadgeProps) {
+export function DateBadge({ date, type, isComplete = false, size = "small", approachingDaysThreshold = 2 }: DateBadgeProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
   const secondaryColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
-  const urgency = getDateUrgency(date);
+  const urgency = getDateUrgency(date, approachingDaysThreshold);
   const iconColor = getIconColor(urgency, isComplete, secondaryColor);
 
   const iconSize = size === "small" ? 12 : 14;

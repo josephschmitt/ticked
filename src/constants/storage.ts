@@ -15,6 +15,7 @@ export const ASYNC_STORAGE_KEYS = {
   THEME_PREFERENCE: "theme_preference",
   ONBOARDING_COMPLETE: "onboarding_complete",
   SHOW_TASK_TYPE_INLINE: "show_task_type_inline",
+  APPROACHING_DAYS_THRESHOLD: "approaching_days_threshold",
 } as const;
 
 export type SecureStorageKey =
