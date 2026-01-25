@@ -11,18 +11,6 @@ export interface FieldMapping {
   url?: string; // URL property ID
 }
 
-export interface PropertyInfo {
-  id: string;
-  name: string;
-  type: string;
-}
-
-export interface DatabaseSchema {
-  id: string;
-  title: string;
-  properties: PropertyInfo[];
-}
-
 export type AppField = keyof FieldMapping;
 
 export const APP_FIELD_CONFIG: Record<
