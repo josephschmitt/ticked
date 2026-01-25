@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
-import { View, ScrollView, useColorScheme, useWindowDimensions, Pressable, Linking } from "react-native";
+import { View, ScrollView, Text, useColorScheme, useWindowDimensions, Pressable, Linking } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTask } from "@/hooks/queries/useTask";
@@ -10,6 +10,18 @@ import { IOS_BACKGROUNDS } from "@/constants/colors";
 
 // Threshold for considering the sheet "full screen" (percentage of screen height)
 const FULL_SCREEN_THRESHOLD = 0.7;
+
+// Format date for timestamp display
+function formatTimestamp(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,7 +38,8 @@ export default function TaskDetailScreen() {
   // Fetch page content
   const { data: blocks, isLoading: isLoadingContent } = usePageContent(id);
 
-  const backgroundColor = isDark ? IOS_BACKGROUNDS.elevated.dark : IOS_BACKGROUNDS.elevated.light;
+  const groupedBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
+  const elevatedBg = isDark ? IOS_BACKGROUNDS.elevated.dark : IOS_BACKGROUNDS.elevated.light;
 
   // Handle long press to open in Notion
   const handleLongPress = useCallback(() => {
@@ -60,12 +73,12 @@ export default function TaskDetailScreen() {
   }, [id, task]);
 
   if (!task) {
-    return <View style={{ flex: 1, backgroundColor }} />;
+    return <View style={{ flex: 1, backgroundColor: groupedBg }} />;
   }
 
   return (
     <Pressable
-      style={{ flex: 1, backgroundColor }}
+      style={{ flex: 1, backgroundColor: groupedBg }}
       onLayout={handleLayout}
       onLongPress={handleLongPress}
       delayLongPress={500}
@@ -79,12 +92,37 @@ export default function TaskDetailScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <TaskDetailContent
-          task={task}
-          blocks={blocks}
-          isLoadingContent={isLoadingContent}
-          isFullScreen={isFullScreen}
-        />
+        <View
+          style={{
+            backgroundColor: elevatedBg,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+          }}
+        >
+          <TaskDetailContent
+            task={task}
+            blocks={blocks}
+            isLoadingContent={isLoadingContent}
+            isFullScreen={isFullScreen}
+          />
+        </View>
+
+        {/* Timestamps */}
+        <View className="px-6 pt-4">
+          {task.creationDate && (
+            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
+              Created {formatTimestamp(task.creationDate)}
+            </Text>
+          )}
+          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
+            Updated {formatTimestamp(task.lastEditedTime)}
+          </Text>
+          {task.status.group === "complete" && task.completedDate && (
+            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
+              Completed {formatTimestamp(task.completedDate)}
+            </Text>
+          )}
+        </View>
       </ScrollView>
     </Pressable>
   );

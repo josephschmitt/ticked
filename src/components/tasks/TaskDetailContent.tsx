@@ -513,7 +513,7 @@ export function TaskDetailContent({
       <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
 
       {/* Content area - tap to open in Notion */}
-      <Pressable onPress={handleContentPress} className="flex-1 active:opacity-70">
+      <Pressable onPress={handleContentPress} className="flex-1 pb-8 active:opacity-70">
         {isLoadingContent ? (
           <View className="py-8 items-center">
             <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
