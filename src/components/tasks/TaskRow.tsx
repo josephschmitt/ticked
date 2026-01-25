@@ -1,6 +1,7 @@
 import { View, Text, Pressable, Linking } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Circle, CheckCircle2, ChevronRight, Link } from "lucide-react-native";
+import { router } from "expo-router";
 import type { Task } from "@/types/task";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 import { useColorScheme } from "react-native";
@@ -8,22 +9,35 @@ import { useColorScheme } from "react-native";
 interface TaskRowProps {
   task: Task;
   onPress?: () => void;
+  onCheckboxPress?: () => void;
   showSeparator?: boolean;
 }
 
-export function TaskRow({ task, onPress }: TaskRowProps) {
+export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const handlePress = () => {
+  // Content area tap - opens task detail sheet
+  const handleContentPress = () => {
     Haptics.selectionAsync();
     if (onPress) {
       onPress();
-    } else if (task.notionUrl) {
-      Linking.openURL(task.notionUrl);
+    } else {
+      // Navigate to task detail sheet
+      router.push(`/(main)/task/${task.id}`);
     }
   };
 
+  // Checkbox tap - placeholder for future "mark complete" functionality
+  const handleCheckboxPress = () => {
+    Haptics.selectionAsync();
+    if (onCheckboxPress) {
+      onCheckboxPress();
+    }
+    // No-op for now - reserved for future toggle functionality
+  };
+
+  // Long press - opens in Notion
   const handleLongPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (task.notionUrl) {
@@ -69,60 +83,72 @@ export function TaskRow({ task, onPress }: TaskRowProps) {
   const linkColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
   return (
-    <Pressable
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      className="flex-row items-center px-4 py-3 min-h-[44px] bg-background-elevated dark:bg-background-dark-elevated active:opacity-70"
+    <View
+      className="flex-row items-center bg-background-elevated dark:bg-background-dark-elevated"
       accessible={true}
       accessibilityLabel={accessibilityLabel}
-      accessibilityHint="Double tap to open in Notion"
       accessibilityRole="button"
     >
-      {/* Checkbox */}
-      <View className="w-6 h-6 items-center justify-center">
-        {isComplete ? (
-          <CheckCircle2 size={22} color={checkboxColor} strokeWidth={2} />
-        ) : (
-          <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
-        )}
-      </View>
+      {/* Checkbox - separate touch target */}
+      <Pressable
+        onPress={handleCheckboxPress}
+        className="pl-4 py-3 pr-1 min-h-[44px] items-center justify-center"
+        accessibilityLabel={isComplete ? "Mark incomplete" : "Mark complete"}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: isComplete }}
+      >
+        <View className="w-6 h-6 items-center justify-center">
+          {isComplete ? (
+            <CheckCircle2 size={22} color={checkboxColor} strokeWidth={2} />
+          ) : (
+            <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
+          )}
+        </View>
+      </Pressable>
 
-      {/* Content */}
-      <View className="flex-1 ml-3">
-        <Text
-          className={`text-[17px] leading-tight ${
-            isComplete
-              ? "text-label-secondary dark:text-label-dark-secondary line-through"
-              : "text-label-primary dark:text-label-dark-primary"
-          }`}
-          numberOfLines={2}
-          accessible={false}
-        >
-          {task.title}
-        </Text>
+      {/* Content - opens task detail */}
+      <Pressable
+        onPress={handleContentPress}
+        onLongPress={handleLongPress}
+        className="flex-1 flex-row items-center py-3 pr-4 min-h-[44px] active:opacity-70"
+        accessibilityHint="Tap to view details, long press to open in Notion"
+      >
+        <View className="flex-1 ml-2">
+          <Text
+            className={`text-[17px] leading-tight ${
+              isComplete
+                ? "text-label-secondary dark:text-label-dark-secondary line-through"
+                : "text-label-primary dark:text-label-dark-primary"
+            }`}
+            numberOfLines={2}
+            accessible={false}
+          >
+            {task.title}
+          </Text>
 
-        {/* Meta row */}
-        {(metaString || task.url) && (
-          <View className="flex-row items-center mt-0.5" accessible={false}>
-            {metaString && (
-              <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary">
-                {metaString}
-              </Text>
-            )}
-            {task.url && (
-              <Link
-                size={12}
-                color={linkColor}
-                strokeWidth={2}
-                style={{ marginLeft: metaString ? 6 : 0 }}
-              />
-            )}
-          </View>
-        )}
-      </View>
+          {/* Meta row */}
+          {(metaString || task.url) && (
+            <View className="flex-row items-center mt-0.5" accessible={false}>
+              {metaString && (
+                <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary">
+                  {metaString}
+                </Text>
+              )}
+              {task.url && (
+                <Link
+                  size={12}
+                  color={linkColor}
+                  strokeWidth={2}
+                  style={{ marginLeft: metaString ? 6 : 0 }}
+                />
+              )}
+            </View>
+          )}
+        </View>
 
-      {/* Disclosure indicator */}
-      <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
-    </Pressable>
+        {/* Disclosure indicator */}
+        <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
+      </Pressable>
+    </View>
   );
 }

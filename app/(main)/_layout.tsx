@@ -49,6 +49,16 @@ export default function MainLayout() {
           presentation: "modal",
         }}
       />
+      <Stack.Screen
+        name="task/[id]"
+        options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.4, 1.0],
+          sheetGrabberVisible: true,
+          sheetInitialDetentIndex: 0,
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
