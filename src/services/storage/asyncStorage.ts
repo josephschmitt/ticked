@@ -110,6 +110,26 @@ export async function getCustomListName(): Promise<string | null> {
 }
 
 /**
+ * Store show task type inline preference.
+ */
+export async function storeShowTaskTypeInline(show: boolean): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.SHOW_TASK_TYPE_INLINE, JSON.stringify(show));
+}
+
+/**
+ * Get show task type inline preference (defaults to true).
+ */
+export async function getShowTaskTypeInline(): Promise<boolean> {
+  const value = await getAsyncItem(ASYNC_STORAGE_KEYS.SHOW_TASK_TYPE_INLINE);
+  if (value === null) return true; // Default to true
+  try {
+    return JSON.parse(value) as boolean;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Clear all configuration (used when signing out or reconfiguring).
  */
 export async function clearAllConfig(): Promise<void> {

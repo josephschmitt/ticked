@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  Switch,
   Alert,
   ActivityIndicator,
   useColorScheme,
@@ -72,6 +73,38 @@ function SettingsRow({
   );
 }
 
+interface SettingsToggleRowProps {
+  label: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  isLast?: boolean;
+}
+
+function SettingsToggleRow({
+  label,
+  value,
+  onValueChange,
+  isLast = false,
+}: SettingsToggleRowProps) {
+  return (
+    <>
+      <View className="flex-row items-center justify-between py-2 px-4 min-h-[44px]">
+        <Text className="text-[17px] text-label-primary dark:text-label-dark-primary">
+          {label}
+        </Text>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ true: BRAND_COLORS.primary }}
+        />
+      </View>
+      {!isLast && (
+        <View className="h-[0.5px] bg-separator dark:bg-separator-dark ml-4" />
+      )}
+    </>
+  );
+}
+
 function SettingsSection({
   title,
   children,
@@ -103,6 +136,8 @@ export default function SettingsScreen() {
   const clearConfig = useConfigStore((state) => state.clearConfig);
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const customListName = useConfigStore((state) => state.customListName);
+  const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
+  const setShowTaskTypeInline = useConfigStore((state) => state.setShowTaskTypeInline);
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
@@ -118,6 +153,11 @@ export default function SettingsScreen() {
     Haptics.selectionAsync();
     router.push("/(main)/settings/list-name");
   }, [router]);
+
+  const handleToggleTaskTypeInline = useCallback((value: boolean) => {
+    Haptics.selectionAsync();
+    setShowTaskTypeInline(value);
+  }, [setShowTaskTypeInline]);
 
   const handleDismiss = useCallback(() => {
     Haptics.selectionAsync();
@@ -216,6 +256,16 @@ export default function SettingsScreen() {
           <SettingsRow
             label="Field Mapping"
             onPress={handleReconfigureFields}
+            isLast
+          />
+        </SettingsSection>
+
+        {/* Display Section */}
+        <SettingsSection title="Display">
+          <SettingsToggleRow
+            label="Show Task Type Inline"
+            value={showTaskTypeInline}
+            onValueChange={handleToggleTaskTypeInline}
             isLast
           />
         </SettingsSection>

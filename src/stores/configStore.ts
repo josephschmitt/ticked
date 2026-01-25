@@ -6,6 +6,8 @@ import {
   getFieldMapping,
   storeCustomListName,
   getCustomListName,
+  storeShowTaskTypeInline,
+  getShowTaskTypeInline,
   clearAllConfig,
 } from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
@@ -15,11 +17,13 @@ interface ConfigState {
   selectedDatabaseName: string | null;
   customListName: string | null;
   fieldMapping: FieldMapping | null;
+  showTaskTypeInline: boolean;
   isConfigured: boolean;
   isLoading: boolean;
   setDatabase: (id: string, name: string) => Promise<void>;
   setCustomListName: (name: string | null) => Promise<void>;
   setFieldMapping: (mapping: FieldMapping) => Promise<void>;
+  setShowTaskTypeInline: (show: boolean) => Promise<void>;
   clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   hydrate: () => Promise<void>;
@@ -30,6 +34,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   selectedDatabaseName: null,
   customListName: null,
   fieldMapping: null,
+  showTaskTypeInline: true,
   isConfigured: false,
   isLoading: true,
 
@@ -63,6 +68,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     });
   },
 
+  setShowTaskTypeInline: async (show) => {
+    // Store in async storage
+    await storeShowTaskTypeInline(show);
+
+    // Update state
+    set({ showTaskTypeInline: show });
+  },
+
   clearConfig: async () => {
     // Clear from async storage
     await clearAllConfig();
@@ -81,10 +94,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [dbConfig, customListName, fieldMapping] = await Promise.all([
+      const [dbConfig, customListName, fieldMapping, showTaskTypeInline] = await Promise.all([
         getDatabaseConfig(),
         getCustomListName(),
         getFieldMapping(),
+        getShowTaskTypeInline(),
       ]);
 
       const isConfigured = !!(
@@ -98,6 +112,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         selectedDatabaseName: dbConfig.databaseName,
         customListName,
         fieldMapping,
+        showTaskTypeInline,
         isConfigured,
         isLoading: false,
       });

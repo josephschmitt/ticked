@@ -4,6 +4,7 @@ import { Circle, CheckCircle2, Link, FolderOpen, Tag } from "lucide-react-native
 import { router } from "expo-router";
 import type { Task } from "@/types/task";
 import { RelationBadge } from "@/components/ui/RelationBadge";
+import { useConfigStore } from "@/stores/configStore";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
 interface TaskRowProps {
@@ -16,6 +17,7 @@ interface TaskRowProps {
 export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
 
   // Content area tap - opens task detail sheet
   const handleContentPress = () => {
@@ -100,7 +102,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
             <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
           )}
         </View>
-        {task.taskType && task.taskTypeIcon && (
+        {showTaskTypeInline && task.taskType && task.taskTypeIcon && (
           <View className="h-6 items-center justify-center opacity-75">
             <RelationBadge icon={task.taskTypeIcon} fallbackIcon={Tag} size="large" />
           </View>
