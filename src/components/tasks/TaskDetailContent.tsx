@@ -391,8 +391,8 @@ export function TaskDetailContent({
         />
       </View>
 
-      {/* Metadata row */}
-      <View className="flex-row flex-wrap items-center mb-4 gap-1.5 ml-10">
+      {/* Metadata row - Status, Task Type, Project */}
+      <View className="flex-row flex-wrap items-center mb-2 gap-1.5 ml-10">
         {/* Status badge */}
         {!isCheckboxType && (
           <Pressable onPress={handleStatusPress} className="active:opacity-70">
@@ -448,36 +448,37 @@ export function TaskDetailContent({
             )}
           </Pressable>
         )}
+      </View>
 
+      {/* Secondary row - Dates and URL */}
+      <View className="flex-row flex-wrap items-center mb-4 gap-1.5 ml-10">
         {/* Dates */}
-        <View className={`flex-row items-center gap-2 ${isComplete ? 'opacity-60' : ''}`}>
-          {hasDoDateField && (
-            <View className="flex-row items-center px-1 py-1">
-              <EditableDateBadge
-                date={task.doDate}
-                type="do"
-                isComplete={isComplete}
-                size="medium"
-                approachingDaysThreshold={approachingDaysThreshold}
-                onDateChange={handleDoDateChange}
-                placeholder="+ Do date"
-              />
-            </View>
-          )}
-          {hasDueDateField && (
-            <View className="flex-row items-center px-1 py-1">
-              <EditableDateBadge
-                date={task.dueDate}
-                type="due"
-                isComplete={isComplete}
-                size="medium"
-                approachingDaysThreshold={approachingDaysThreshold}
-                onDateChange={handleDueDateChange}
-                placeholder="+ Due date"
-              />
-            </View>
-          )}
-        </View>
+        {hasDoDateField && (
+          <View className={`flex-row items-center px-1 py-1 ${isComplete ? 'opacity-60' : ''}`}>
+            <EditableDateBadge
+              date={task.doDate}
+              type="do"
+              isComplete={isComplete}
+              size="medium"
+              approachingDaysThreshold={approachingDaysThreshold}
+              onDateChange={handleDoDateChange}
+              placeholder="+ Do date"
+            />
+          </View>
+        )}
+        {hasDueDateField && (
+          <View className={`flex-row items-center px-1 py-1 ${isComplete ? 'opacity-60' : ''}`}>
+            <EditableDateBadge
+              date={task.dueDate}
+              type="due"
+              isComplete={isComplete}
+              size="medium"
+              approachingDaysThreshold={approachingDaysThreshold}
+              onDateChange={handleDueDateChange}
+              placeholder="+ Due date"
+            />
+          </View>
+        )}
 
         {/* URL */}
         {hasUrlField && (
