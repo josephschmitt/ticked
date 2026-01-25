@@ -2,10 +2,13 @@ import { useState, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { buildAuthorizationUrl, exchangeCodeForTokens } from "@/services/auth/oauth";
+import {
+  buildAuthorizationUrl,
+  exchangeCodeForTokens,
+  getOAuthCallbackUrl,
+} from "@/services/auth/oauth";
 import { useAuthStore } from "@/stores/authStore";
 
 // Required for web browser redirect
@@ -17,10 +20,8 @@ export default function LandingScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "ticked",
-    path: "oauth/callback",
-  });
+  // The worker's callback URL (used for Notion redirect_uri)
+  const workerCallbackUrl = getOAuthCallbackUrl();
 
   const handleConnect = useCallback(async () => {
     try {
@@ -29,11 +30,15 @@ export default function LandingScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Build auth URL and open in browser
+      // Notion redirects to worker, worker redirects to ticked://oauth/callback
       const authUrl = buildAuthorizationUrl();
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        "ticked://oauth/callback"
+      );
 
       if (result.type === "success" && result.url) {
-        // Parse the callback URL
+        // Parse the callback URL (ticked://oauth/callback?code=xxx)
         const url = new URL(result.url);
         const code = url.searchParams.get("code");
         const errorParam = url.searchParams.get("error");
@@ -46,8 +51,8 @@ export default function LandingScreen() {
           throw new Error("No authorization code received");
         }
 
-        // Exchange code for tokens
-        const tokens = await exchangeCodeForTokens(code, redirectUri);
+        // Exchange code for tokens (use worker callback URL as redirect_uri)
+        const tokens = await exchangeCodeForTokens(code, workerCallbackUrl);
 
         // Store auth data
         await setAuth({
@@ -73,7 +78,7 @@ export default function LandingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [redirectUri, setAuth, router]);
+  }, [workerCallbackUrl, setAuth, router]);
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-black">

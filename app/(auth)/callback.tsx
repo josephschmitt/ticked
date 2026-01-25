@@ -2,15 +2,13 @@ import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as AuthSession from "expo-auth-session";
-import { exchangeCodeForTokens } from "@/services/auth/oauth";
+import { exchangeCodeForTokens, getOAuthCallbackUrl } from "@/services/auth/oauth";
 import { useAuthStore } from "@/stores/authStore";
 
 /**
  * OAuth callback screen.
- * This handles the redirect from Notion after authorization.
- * In most cases, the landing screen handles the callback via WebBrowser,
- * but this screen serves as a fallback for deep links.
+ * This handles the redirect from the worker after Notion authorization.
+ * The worker redirects to ticked://oauth/callback with the auth code.
  */
 export default function CallbackScreen() {
   const params = useLocalSearchParams<{ code?: string; error?: string }>();
@@ -18,10 +16,8 @@ export default function CallbackScreen() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "ticked",
-    path: "oauth/callback",
-  });
+  // Use the worker's callback URL (same as used during authorization)
+  const redirectUri = getOAuthCallbackUrl();
 
   useEffect(() => {
     async function handleCallback() {

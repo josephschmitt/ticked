@@ -28,20 +28,9 @@ cd ticked
 npm install
 ```
 
-### 2. Create a Notion Integration
+### 2. Deploy the OAuth Proxy (Cloudflare Worker)
 
-1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
-2. Click **"New integration"**
-3. Name it (e.g., "Ticked")
-4. Set type to **"Public"** (required for OAuth)
-5. Under OAuth & Permissions:
-   - Add redirect URI: `ticked://oauth/callback`
-   - Enable: Read content, Read user information
-6. Save and copy your **Client ID** and **Client Secret**
-
-### 3. Deploy the OAuth Proxy (Cloudflare Worker)
-
-The app uses a Cloudflare Worker to securely exchange OAuth tokens without exposing the client secret.
+The app uses a Cloudflare Worker to handle OAuth redirects and token exchange. Deploy it first to get the callback URL needed for Notion.
 
 ```bash
 cd cloudflare-worker
@@ -52,7 +41,22 @@ npx wrangler deploy       # Deploy the worker
 
 After deployment, note your worker URL (e.g., `https://ticked-oauth-proxy.xxx.workers.dev`).
 
-Set the secrets:
+### 3. Create a Notion Integration
+
+1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
+2. Click **"New integration"**
+3. Name it (e.g., "Ticked")
+4. Upload a logo (required for public integrations)
+5. Set type to **"Public"** (required for OAuth)
+6. Under OAuth & Permissions:
+   - Add redirect URI: `https://ticked-oauth-proxy.<your-subdomain>.workers.dev/callback`
+     (Use your worker URL from step 2, with `/callback` at the end)
+   - Enable: Read content, Read user information
+7. Save and copy your **Client ID** and **Client Secret**
+
+### 4. Configure Worker Secrets
+
+Back in the `cloudflare-worker` directory, set the Notion credentials:
 
 ```bash
 npx wrangler secret put NOTION_CLIENT_ID
@@ -62,7 +66,7 @@ npx wrangler secret put NOTION_CLIENT_SECRET
 # Paste your Notion client secret
 ```
 
-### 4. Configure Environment Variables
+### 5. Configure Environment Variables
 
 Copy the example environment file and fill in your values:
 
@@ -77,11 +81,13 @@ EXPO_PUBLIC_NOTION_CLIENT_ID=your_notion_client_id
 EXPO_PUBLIC_OAUTH_PROXY_URL=https://ticked-oauth-proxy.xxx.workers.dev
 ```
 
-### 5. Run the App
+### 6. Run the App
 
 ```bash
-npm start
+npm start --clear
 ```
+
+> **Note**: Always use `--clear` after changing environment variables to ensure Expo picks up the new values.
 
 Scan the QR code with the Expo Go app on your device, or press `i` for iOS simulator.
 
@@ -122,13 +128,20 @@ ticked/
 
 ## Troubleshooting
 
+### "OAuth proxy URL not configured"
+
+This error means your `.env` file is missing or Expo hasn't loaded the new environment variables. Make sure:
+1. `.env` exists in the project root with `EXPO_PUBLIC_OAUTH_PROXY_URL` set
+2. Restart Expo with `npm start --clear` after changing env vars
+
 ### "expected dynamic type 'boolean', but had type 'string'"
 
 This error occurs when Expo Go has a stale cached bundle. **Force-quit Expo Go** completely (swipe away from app switcher) and reconnect.
 
 ### OAuth callback not working
 
-Ensure your Notion integration has the correct redirect URI: `ticked://oauth/callback`
+Ensure your Notion integration has the correct redirect URI matching your worker URL:
+`https://ticked-oauth-proxy.<your-subdomain>.workers.dev/callback`
 
 ### Worker not responding
 

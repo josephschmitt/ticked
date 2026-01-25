@@ -1,4 +1,3 @@
-import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import { OAUTH_CONFIG } from "@/constants";
@@ -15,7 +14,8 @@ WebBrowser.maybeCompleteAuthSession();
  * Get the OAuth proxy URL from environment or constants.
  */
 function getOAuthProxyUrl(): string {
-  const url = Constants.expoConfig?.extra?.oauthProxyUrl ||
+  const url =
+    Constants.expoConfig?.extra?.oauthProxyUrl ||
     process.env.EXPO_PUBLIC_OAUTH_PROXY_URL;
 
   if (!url) {
@@ -25,10 +25,20 @@ function getOAuthProxyUrl(): string {
 }
 
 /**
+ * Get the OAuth callback URL (worker's /callback endpoint).
+ * This is used as the redirect_uri for Notion OAuth.
+ */
+export function getOAuthCallbackUrl(): string {
+  const proxyUrl = getOAuthProxyUrl();
+  return `${proxyUrl}/callback`;
+}
+
+/**
  * Get the Notion client ID from environment.
  */
 function getClientId(): string {
-  const clientId = Constants.expoConfig?.extra?.notionClientId ||
+  const clientId =
+    Constants.expoConfig?.extra?.notionClientId ||
     process.env.EXPO_PUBLIC_NOTION_CLIENT_ID;
 
   if (!clientId) {
@@ -38,31 +48,12 @@ function getClientId(): string {
 }
 
 /**
- * Create the OAuth request configuration.
+ * Start the OAuth flow by opening the Notion authorization page.
+ * Uses the worker's /callback endpoint as the redirect URI.
  */
-export function useNotionAuthRequest() {
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "ticked",
-    path: "oauth/callback",
-  });
-
-  const request = new AuthSession.AuthRequest({
-    clientId: getClientId(),
-    redirectUri,
-    scopes: [], // Notion doesn't use scopes in OAuth
-    responseType: AuthSession.ResponseType.Code,
-  });
-
-  const discovery: AuthSession.DiscoveryDocument = {
-    authorizationEndpoint: OAUTH_CONFIG.authorizationEndpoint,
-  };
-
-  return {
-    request,
-    discovery,
-    redirectUri,
-    promptAsync: () => request.promptAsync(discovery),
-  };
+export async function startOAuthFlow(state?: string): Promise<WebBrowser.WebBrowserResult> {
+  const authUrl = buildAuthorizationUrl(state);
+  return WebBrowser.openAuthSessionAsync(authUrl, "ticked://oauth/callback");
 }
 
 /**
@@ -117,14 +108,12 @@ export async function exchangeCodeForTokens(
 }
 
 /**
- * Build the Notion authorization URL manually (alternative approach).
+ * Build the Notion authorization URL.
+ * Uses the worker's /callback endpoint as the redirect URI.
  */
 export function buildAuthorizationUrl(state?: string): string {
   const clientId = getClientId();
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "ticked",
-    path: "oauth/callback",
-  });
+  const redirectUri = getOAuthCallbackUrl();
 
   const params = new URLSearchParams({
     client_id: clientId,
