@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useCompletedTasks } from "@/hooks/queries/useTasks";
-import { TaskGroup } from "@/components/tasks/TaskGroup";
+import { DateTaskGroup } from "@/components/tasks/DateTaskGroup";
 
 export default function DoneScreen() {
   const { groups, isLoading, error, refetch, isRefetching } = useCompletedTasks();
@@ -90,8 +90,8 @@ export default function DoneScreen() {
           }
         >
           {groups.map((group) => (
-            <TaskGroup
-              key={group.status.id}
+            <DateTaskGroup
+              key={group.date || "unknown"}
               group={group}
               defaultExpanded={true}
             />

@@ -40,6 +40,12 @@ export interface TaskGroup {
   tasks: Task[];
 }
 
+export interface DateTaskGroup {
+  label: string;
+  date: string; // ISO date string for sorting
+  tasks: Task[];
+}
+
 // Status color mapping from Notion colors to Tailwind classes
 export const STATUS_COLORS: Record<string, string> = {
   default: "bg-gray-100 dark:bg-gray-800",
