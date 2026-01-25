@@ -103,7 +103,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
           )}
         </View>
         {showTaskTypeInline && task.taskType && task.taskTypeIcon && (
-          <View className="h-6 items-center justify-center opacity-75">
+          <View className="h-6 items-center justify-center">
             <RelationBadge icon={task.taskTypeIcon} fallbackIcon={Tag} size="large" />
           </View>
         )}

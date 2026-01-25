@@ -51,7 +51,12 @@ export function RelationBadge({
       return (
         <Image
           source={{ uri: imageUrl }}
-          style={{ width: imageDimension, height: imageDimension, borderRadius: 2 }}
+          style={{
+            width: imageDimension,
+            height: imageDimension,
+            borderRadius: 2,
+            opacity: isSvg ? 1 : 0.75,
+          }}
           contentFit="contain"
           tintColor={isSvg ? iconColor : undefined}
         />
