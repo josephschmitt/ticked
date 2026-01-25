@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useColorScheme } from "react-native";
 import * as SystemUI from "expo-system-ui";
+import { useAuthStore } from "@/stores/authStore";
+import { useConfigStore } from "@/stores/configStore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,7 +19,15 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const hydrateAuth = useAuthStore((state) => state.hydrate);
+  const hydrateConfig = useConfigStore((state) => state.hydrate);
 
+  // Hydrate stores on app start
+  useEffect(() => {
+    Promise.all([hydrateAuth(), hydrateConfig()]);
+  }, [hydrateAuth, hydrateConfig]);
+
+  // Set system UI background color based on theme
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(
       colorScheme === "dark" ? "#000000" : "#ffffff"

@@ -1,4 +1,11 @@
 import { create } from "zustand";
+import {
+  storeDatabaseConfig,
+  getDatabaseConfig,
+  storeFieldMapping,
+  getFieldMapping,
+  clearAllConfig,
+} from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
 
 interface ConfigState {
@@ -7,44 +14,80 @@ interface ConfigState {
   fieldMapping: FieldMapping | null;
   isConfigured: boolean;
   isLoading: boolean;
-  setDatabase: (id: string, name: string) => void;
-  setFieldMapping: (mapping: FieldMapping) => void;
-  clearConfig: () => void;
+  setDatabase: (id: string, name: string) => Promise<void>;
+  setFieldMapping: (mapping: FieldMapping) => Promise<void>;
+  clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   hydrate: () => Promise<void>;
 }
 
-export const useConfigStore = create<ConfigState>((set) => ({
+export const useConfigStore = create<ConfigState>((set, get) => ({
   selectedDatabaseId: null,
   selectedDatabaseName: null,
   fieldMapping: null,
   isConfigured: false,
   isLoading: true,
 
-  setDatabase: (id, name) =>
+  setDatabase: async (id, name) => {
+    // Store in async storage
+    await storeDatabaseConfig({ databaseId: id, databaseName: name });
+
+    // Update state
     set({
       selectedDatabaseId: id,
       selectedDatabaseName: name,
-    }),
+    });
+  },
 
-  setFieldMapping: (mapping) =>
+  setFieldMapping: async (mapping) => {
+    // Store in async storage
+    await storeFieldMapping(mapping);
+
+    // Update state
     set({
       fieldMapping: mapping,
       isConfigured: true,
-    }),
+    });
+  },
 
-  clearConfig: () =>
+  clearConfig: async () => {
+    // Clear from async storage
+    await clearAllConfig();
+
+    // Update state
     set({
       selectedDatabaseId: null,
       selectedDatabaseName: null,
       fieldMapping: null,
       isConfigured: false,
-    }),
+    });
+  },
 
   setLoading: (loading) => set({ isLoading: loading }),
 
-  // Will be implemented in Milestone 4
   hydrate: async () => {
-    set({ isLoading: false });
+    try {
+      const [dbConfig, fieldMapping] = await Promise.all([
+        getDatabaseConfig(),
+        getFieldMapping(),
+      ]);
+
+      const isConfigured = !!(
+        dbConfig.databaseId &&
+        fieldMapping?.taskName &&
+        fieldMapping?.status
+      );
+
+      set({
+        selectedDatabaseId: dbConfig.databaseId,
+        selectedDatabaseName: dbConfig.databaseName,
+        fieldMapping,
+        isConfigured,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Failed to hydrate config store:", error);
+      set({ isLoading: false });
+    }
   },
 }));
