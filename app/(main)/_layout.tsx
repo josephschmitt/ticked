@@ -19,8 +19,14 @@ export default function MainLayout() {
         contentStyle: { backgroundColor: contentBg },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Tasks" }} />
-      <Stack.Screen name="done" options={{ title: "Done" }} />
+      <Stack.Screen
+        name="index"
+        options={{ title: "Tasks", headerLargeTitleEnabled: true }}
+      />
+      <Stack.Screen
+        name="done"
+        options={{ title: "Done", headerLargeTitleEnabled: true }}
+      />
       <Stack.Screen
         name="settings"
         options={{

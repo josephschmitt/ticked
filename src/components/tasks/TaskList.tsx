@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable, useColorScheme } from "react-native";
-import { AlertCircle, CheckCircle2, Inbox, ChevronRight } from "lucide-react-native";
+import { AlertCircle, CheckCircle2, ChevronRight } from "lucide-react-native";
 import type { TaskGroup as TaskGroupType } from "@/types/task";
 import { TaskGroup } from "./TaskGroup";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
@@ -82,6 +82,7 @@ export function TaskList({
     <ScrollView
       className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
       contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
+      contentInsetAdjustmentBehavior="automatic"
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
       }
