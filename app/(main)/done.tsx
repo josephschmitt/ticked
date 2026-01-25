@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, useColorScheme } from "react-native";
 import { Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -11,13 +11,13 @@ import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 export default function DoneScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
 
   const {
     groups,
     isLoading,
     error,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -25,7 +25,9 @@ export default function DoneScreen() {
 
   const handleRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsUserRefreshing(true);
     await refetch();
+    setIsUserRefreshing(false);
   }, [refetch]);
 
   const handleEndReached = useCallback(() => {
@@ -94,7 +96,7 @@ export default function DoneScreen() {
           contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 40 }}
           contentInsetAdjustmentBehavior="automatic"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+            <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
           }
           ListEmptyComponent={
             <View className="items-center">
@@ -122,7 +124,7 @@ export default function DoneScreen() {
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+          <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

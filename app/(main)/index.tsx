@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Pressable } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -12,12 +12,15 @@ export default function TaskListScreen() {
   const router = useRouter();
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const customListName = useConfigStore((state) => state.customListName);
-  const { groups, isLoading, error, refetch, isRefetching } = useGroupedTasks();
+  const { groups, isLoading, error, refetch } = useGroupedTasks();
   const { totalCount: doneCount } = useCompletedTasks();
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsUserRefreshing(true);
     await refetch();
+    setIsUserRefreshing(false);
   }, [refetch]);
 
   const handleOpenSettings = useCallback(() => {
@@ -49,7 +52,7 @@ export default function TaskListScreen() {
       <TaskList
         groups={groups}
         isLoading={isLoading}
-        isRefreshing={isRefetching}
+        isRefreshing={isUserRefreshing}
         onRefresh={handleRefresh}
         error={error instanceof Error ? error : null}
         doneCount={doneCount}

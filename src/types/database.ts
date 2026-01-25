@@ -29,6 +29,8 @@ export interface DatabaseProperty {
   // For status
   groups?: NotionStatusGroup[];
   statusOptions?: StatusOption[];
+  // For relation
+  relationDatabaseId?: string;
 }
 
 export type PropertyType =

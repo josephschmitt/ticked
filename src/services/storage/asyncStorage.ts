@@ -150,6 +150,24 @@ export async function getApproachingDaysThreshold(): Promise<number> {
 }
 
 /**
+ * Store default status ID (used when unchecking tasks).
+ */
+export async function storeDefaultStatusId(id: string | null): Promise<void> {
+  if (id) {
+    await setAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_STATUS_ID, id);
+  } else {
+    await deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_STATUS_ID);
+  }
+}
+
+/**
+ * Get default status ID.
+ */
+export async function getDefaultStatusId(): Promise<string | null> {
+  return getAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_STATUS_ID);
+}
+
+/**
  * Clear all configuration (used when signing out or reconfiguring).
  */
 export async function clearAllConfig(): Promise<void> {
@@ -158,5 +176,6 @@ export async function clearAllConfig(): Promise<void> {
     deleteAsyncItem(ASYNC_STORAGE_KEYS.SELECTED_DATABASE_NAME),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.FIELD_MAPPING),
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_STATUS_ID),
   ]);
 }

@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { ChevronRight, X } from "lucide-react-native";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
+import { useStatuses } from "@/hooks/queries/useTasks";
 import { clearNotionClient } from "@/services/notion/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
@@ -142,6 +143,12 @@ export default function SettingsScreen() {
   const setShowTaskTypeInline = useConfigStore((state) => state.setShowTaskTypeInline);
   const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
   const setApproachingDaysThreshold = useConfigStore((state) => state.setApproachingDaysThreshold);
+  const defaultStatusId = useConfigStore((state) => state.defaultStatusId);
+  const setDefaultStatusId = useConfigStore((state) => state.setDefaultStatusId);
+
+  // Get available statuses for the default status picker
+  const { data: statuses } = useStatuses();
+  const todoStatuses = statuses?.filter((s) => s.group === "todo" || s.group === "inProgress") || [];
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
@@ -209,6 +216,50 @@ export default function SettingsScreen() {
       );
     }
   }, [setApproachingDaysThreshold]);
+
+  const getDefaultStatusLabel = useCallback(() => {
+    if (!defaultStatusId) return "Auto (first To-do)";
+    const status = statuses?.find((s) => s.id === defaultStatusId);
+    return status?.name || "Auto (first To-do)";
+  }, [defaultStatusId, statuses]);
+
+  const handleChangeDefaultStatus = useCallback(() => {
+    Haptics.selectionAsync();
+    if (todoStatuses.length === 0) return;
+
+    const options = [
+      { label: "Auto (first To-do)", value: null },
+      ...todoStatuses.map((s) => ({ label: s.name, value: s.id })),
+    ];
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options.map((o) => o.label), "Cancel"],
+          cancelButtonIndex: options.length,
+          title: "Default Status",
+          message: "Status to use when unchecking completed tasks",
+        },
+        (buttonIndex) => {
+          if (buttonIndex < options.length) {
+            setDefaultStatusId(options[buttonIndex].value);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        "Default Status",
+        "Status to use when unchecking completed tasks",
+        [
+          ...options.map((option) => ({
+            text: option.label,
+            onPress: () => setDefaultStatusId(option.value),
+          })),
+          { text: "Cancel", style: "cancel" as const },
+        ]
+      );
+    }
+  }, [todoStatuses, setDefaultStatusId]);
 
   const handleDismiss = useCallback(() => {
     Haptics.selectionAsync();
@@ -322,6 +373,11 @@ export default function SettingsScreen() {
             label="Upcoming Warning"
             value={getApproachingDaysLabel(approachingDaysThreshold)}
             onPress={handleChangeApproachingDays}
+          />
+          <SettingsRow
+            label="Default Status"
+            value={getDefaultStatusLabel()}
+            onPress={handleChangeDefaultStatus}
             isLast
           />
         </SettingsSection>

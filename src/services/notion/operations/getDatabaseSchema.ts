@@ -30,6 +30,10 @@ interface PropertyResponse {
     options: SelectOptionResponse[];
     groups: StatusGroupResponse[];
   };
+  relation?: {
+    database_id: string;
+    type: string;
+  };
 }
 
 interface DatabaseResponse {
@@ -112,6 +116,11 @@ export async function getDatabaseSchema(
             option_ids: group.option_ids,
           })
         );
+      }
+
+      // Add relation database ID
+      if (prop.type === "relation" && prop.relation) {
+        baseProperty.relationDatabaseId = prop.relation.database_id;
       }
 
       return baseProperty;

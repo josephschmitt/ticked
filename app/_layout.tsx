@@ -1,5 +1,6 @@
 import "../global.css";
 import { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import * as SystemUI from "expo-system-ui";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { ToastContainer } from "@/components/ui/ToastContainer";
 import { IOS_BACKGROUNDS } from "@/constants/colors";
 
 const queryClient = new QueryClient({
@@ -42,20 +44,23 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="auto" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: contentBg,
-            },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(setup)" />
-          <Stack.Screen name="(main)" />
-        </Stack>
+        <View style={StyleSheet.absoluteFill}>
+          <StatusBar style="auto" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: contentBg,
+              },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(setup)" />
+            <Stack.Screen name="(main)" />
+          </Stack>
+          <ToastContainer />
+        </View>
       </QueryClientProvider>
     </ErrorBoundary>
   );

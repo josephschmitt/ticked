@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Linking, useColorScheme } from "react-native";
+import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Circle, CheckCircle2, Link, FolderOpen, Tag } from "lucide-react-native";
 import { router } from "expo-router";
@@ -6,6 +6,8 @@ import type { Task } from "@/types/task";
 import { DateBadge, formatDisplayDate } from "@/components/ui/DateBadge";
 import { RelationBadge } from "@/components/ui/RelationBadge";
 import { useConfigStore } from "@/stores/configStore";
+import { useStatuses } from "@/hooks/queries/useTasks";
+import { useUpdateTaskStatus, useUpdateTaskCheckbox } from "@/hooks/mutations/useUpdateTask";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
 interface TaskRowProps {
@@ -20,6 +22,14 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const isDark = colorScheme === "dark";
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
   const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
+  const defaultStatusId = useConfigStore((state) => state.defaultStatusId);
+
+  // Get statuses and mutations
+  const { data: statuses } = useStatuses();
+  const updateStatusMutation = useUpdateTaskStatus();
+  const updateCheckboxMutation = useUpdateTaskCheckbox();
+
+  const isToggling = updateStatusMutation.isPending || updateCheckboxMutation.isPending;
 
   // Content area tap - opens task detail sheet
   const handleContentPress = () => {
@@ -32,13 +42,81 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
     }
   };
 
-  // Checkbox tap - placeholder for future "mark complete" functionality
+  // Checkbox tap - toggles completion status
   const handleCheckboxPress = () => {
+    if (isToggling) return;
+
     Haptics.selectionAsync();
+
+    // If there's a custom handler, use it
     if (onCheckboxPress) {
       onCheckboxPress();
+      return;
     }
-    // No-op for now - reserved for future toggle functionality
+
+    // Check if this is a checkbox-type status (id is "checked" or "unchecked")
+    const isCheckboxType = task.status.id === "checked" || task.status.id === "unchecked";
+
+    if (isCheckboxType) {
+      // Toggle checkbox
+      const newChecked = task.status.id !== "checked";
+      updateCheckboxMutation.mutate(
+        { task, checked: newChecked },
+        {
+          onSuccess: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+          onError: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          },
+        }
+      );
+    } else if (statuses) {
+      // Status-type property
+      const isComplete = task.status.group === "complete";
+
+      if (isComplete) {
+        // Find the default status or first todo status
+        let targetStatus = defaultStatusId
+          ? statuses.find((s) => s.id === defaultStatusId)
+          : undefined;
+
+        if (!targetStatus) {
+          // Fall back to first todo status
+          targetStatus = statuses.find((s) => s.group === "todo");
+        }
+
+        if (targetStatus) {
+          updateStatusMutation.mutate(
+            { task, newStatus: targetStatus },
+            {
+              onSuccess: () => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              },
+              onError: () => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              },
+            }
+          );
+        }
+      } else {
+        // Find first complete status
+        const completeStatus = statuses.find((s) => s.group === "complete");
+        if (completeStatus) {
+          updateStatusMutation.mutate(
+            { task, newStatus: completeStatus },
+            {
+              onSuccess: () => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              },
+              onError: () => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              },
+            }
+          );
+        }
+      }
+    }
   };
 
   // Long press - opens in Notion
@@ -76,13 +154,16 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       {/* Checkbox column - includes checkbox and optional task type icon */}
       <Pressable
         onPress={handleCheckboxPress}
+        disabled={isToggling}
         className="flex-row pl-6 pt-3 pb-3 pr-2 min-h-[44px] items-center gap-2"
         accessibilityLabel={isComplete ? "Mark incomplete" : "Mark complete"}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isComplete }}
       >
         <View className="w-6 h-6 items-center justify-center">
-          {isComplete ? (
+          {isToggling ? (
+            <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
+          ) : isComplete ? (
             <CheckCircle2 size={22} color={checkboxColor} strokeWidth={2} />
           ) : (
             <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
