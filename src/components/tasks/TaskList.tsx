@@ -26,6 +26,7 @@ export function TaskList({
 }: TaskListProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { shouldConstrain } = useResponsiveLayout();
 
   // Loading state
   if (isLoading && groups.length === 0) {
@@ -79,7 +80,6 @@ export function TaskList({
   }
 
   const chevronColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3;
-  const { shouldConstrain } = useResponsiveLayout();
   const cardRadius = shouldConstrain ? "rounded-3xl" : "rounded-[32px]";
 
   return (
