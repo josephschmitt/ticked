@@ -7,6 +7,7 @@ import { useColorScheme } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,21 +36,23 @@ export default function RootLayout() {
   }, [colorScheme]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="auto" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff",
-          },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(setup)" options={{ headerShown: false }} />
-        <Stack.Screen name="(main)" options={{ headerShown: false }} />
-      </Stack>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <StatusBar style="auto" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff",
+            },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(setup)" options={{ headerShown: false }} />
+          <Stack.Screen name="(main)" options={{ headerShown: false }} />
+        </Stack>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
