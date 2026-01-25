@@ -51,35 +51,27 @@ export function useStatuses() {
 
 /**
  * Group tasks by status for display.
+ * Excludes "complete" status groups - those are shown on a separate Done page.
+ * Reverses the order from Notion to show active statuses first.
  */
 export function groupTasksByStatus(
   tasks: Task[],
   statuses: TaskStatus[]
 ): TaskGroup[] {
-  // Define the order of status groups
-  const groupOrder: StatusGroup[] = ["todo", "inProgress", "complete"];
-
-  // Create groups for each status
   const groups: TaskGroup[] = [];
 
   for (const status of statuses) {
+    // Skip complete statuses - they'll be shown on the Done page
+    if (status.group === "complete") continue;
+
     const tasksForStatus = tasks.filter((t) => t.status.id === status.id);
-    if (tasksForStatus.length > 0 || status.group !== "complete") {
-      groups.push({
-        status,
-        tasks: tasksForStatus,
-      });
-    }
+    groups.push({
+      status,
+      tasks: tasksForStatus,
+    });
   }
 
-  // Sort groups by the predefined order
-  groups.sort((a, b) => {
-    const aIndex = groupOrder.indexOf(a.status.group);
-    const bIndex = groupOrder.indexOf(b.status.group);
-    return aIndex - bIndex;
-  });
-
-  return groups;
+  return groups.reverse();
 }
 
 /**
