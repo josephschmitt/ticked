@@ -3,8 +3,7 @@ import { Circle, CheckCircle2, Link as LinkIcon, Calendar, FolderOpen, Tag } fro
 import * as Haptics from "expo-haptics";
 import type { Task } from "@/types/task";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
-import { getContentPreview } from "@/services/notion/operations/getPageContent";
-import { BlockListRenderer } from "@/components/notion/BlockRenderer";
+import { MarkdownContent } from "@/components/notion/MarkdownContent";
 import { RelationBadge } from "@/components/ui/RelationBadge";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
@@ -54,9 +53,6 @@ export function TaskDetailContent({
       Linking.openURL(task.url);
     }
   };
-
-  // Content preview for partial view
-  const contentPreview = blocks ? getContentPreview(blocks, 150) : "";
 
   return (
     <View className="flex-1 px-6 pt-6">
@@ -144,42 +140,19 @@ export function TaskDetailContent({
       <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
 
       {/* Content area */}
-      {isFullScreen ? (
-        // Full content in expanded view
-        <View className="flex-1">
-          {isLoadingContent ? (
-            <View className="py-8 items-center">
-              <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
-            </View>
-          ) : blocks && blocks.length > 0 ? (
-            <BlockListRenderer blocks={blocks} />
-          ) : (
-            <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
-              No content
-            </Text>
-          )}
-        </View>
-      ) : (
-        // Preview in partial view
-        <View>
-          {isLoadingContent ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
-            </View>
-          ) : contentPreview ? (
-            <Text
-              className="text-[15px] text-label-secondary dark:text-label-dark-secondary"
-              numberOfLines={3}
-            >
-              {contentPreview}
-            </Text>
-          ) : (
-            <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
-              No content
-            </Text>
-          )}
-        </View>
-      )}
+      <View className="flex-1">
+        {isLoadingContent ? (
+          <View className="py-8 items-center">
+            <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
+          </View>
+        ) : blocks && blocks.length > 0 ? (
+          <MarkdownContent blocks={blocks} />
+        ) : (
+          <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
+            No content
+          </Text>
+        )}
+      </View>
     </View>
   );
 }

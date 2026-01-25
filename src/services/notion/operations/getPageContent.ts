@@ -17,10 +17,18 @@ export type SupportedBlockType =
   | "callout";
 
 export interface RichTextItem {
-  type: "text";
-  text: {
+  type: "text" | "mention" | "equation";
+  text?: {
     content: string;
     link: { url: string } | null;
+  };
+  mention?: {
+    type: "link_preview" | "page" | "database" | "date" | "user";
+    link_preview?: { url: string };
+    page?: { id: string };
+    database?: { id: string };
+    date?: { start: string; end: string | null };
+    user?: { id: string };
   };
   annotations: {
     bold: boolean;
@@ -31,6 +39,7 @@ export interface RichTextItem {
     color: string;
   };
   plain_text: string;
+  href?: string | null;
 }
 
 export interface NotionBlock {
