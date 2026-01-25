@@ -67,10 +67,10 @@ export function TaskDetailContent({
       </View>
 
       {/* Metadata row */}
-      <View className="flex-row flex-wrap items-center mb-4 gap-2 ml-10">
+      <View className="flex-row flex-wrap items-center mb-4 gap-1.5 ml-10">
         {/* Status badge */}
         <View
-          className="px-3 py-1 rounded-full"
+          className="px-2.5 py-1 rounded-full"
           style={{ backgroundColor: statusBgColor }}
         >
           <Text className="text-[13px] font-medium text-label-primary dark:text-label-dark-primary">
@@ -80,7 +80,7 @@ export function TaskDetailContent({
 
         {/* Task Type */}
         {task.taskType && (
-          <View className="flex-row items-center px-2 py-1">
+          <View className="flex-row items-center px-1 py-1">
             <RelationBadge
               name={task.taskType}
               icon={task.taskTypeIcon}
@@ -92,7 +92,7 @@ export function TaskDetailContent({
 
         {/* Project */}
         {task.project && (
-          <View className="flex-row items-center px-2 py-1">
+          <View className="flex-row items-center px-1 py-1">
             <RelationBadge
               name={task.project}
               icon={task.projectIcon}
@@ -102,40 +102,44 @@ export function TaskDetailContent({
           </View>
         )}
 
-        {/* Dates */}
-        {task.doDate && (
-          <View className="flex-row items-center px-2 py-1">
-            <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="medium" />
-          </View>
-        )}
-        {task.dueDate && (
-          <View className="flex-row items-center px-2 py-1">
-            <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="medium" />
+        {/* Dates and URL - grouped together so they wrap as a unit */}
+        {(task.url || task.doDate || task.dueDate) && (
+          <View className={`flex-row items-center gap-2 ${isComplete ? 'opacity-60' : ''}`}>
+            {/* Dates */}
+            {task.doDate && (
+              <View className="flex-row items-center px-1 py-1">
+                <DateBadge date={task.doDate} type="do" isComplete={isComplete} size="medium" />
+              </View>
+            )}
+            {task.dueDate && (
+              <View className="flex-row items-center px-1 py-1">
+                <DateBadge date={task.dueDate} type="due" isComplete={isComplete} size="medium" />
+              </View>
+            )}
+            {/* URL (flexible, clips with ellipsis) */}
+            {task.url && (
+              <Pressable
+                onPress={handleOpenUrl}
+                className="flex-row items-center flex-1 min-w-0 px-1 py-1 active:opacity-70"
+              >
+                <LinkIcon
+                  size={14}
+                  color={secondaryColor}
+                  strokeWidth={2}
+                  style={{ flexShrink: 0 }}
+                />
+                <Text
+                  className="text-[13px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {task.url}
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
       </View>
-
-      {/* URL row */}
-      {task.url && (
-        <Pressable
-          onPress={handleOpenUrl}
-          className={`flex-row items-center mb-4 ml-10 active:opacity-70 ${isComplete ? 'opacity-60' : ''}`}
-        >
-          <LinkIcon
-            size={14}
-            color={secondaryColor}
-            strokeWidth={2}
-            style={{ flexShrink: 0 }}
-          />
-          <Text
-            className="text-[13px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {task.url}
-          </Text>
-        </Pressable>
-      )}
 
       {/* Divider */}
       <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
