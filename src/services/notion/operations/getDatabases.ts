@@ -38,7 +38,7 @@ export async function getDatabases(): Promise<NotionDatabase[]> {
     },
   })) as unknown as { results: NotionDatabaseResult[] };
 
-  // Filter to only include full database objects
+  // Filter to only include full data source objects
   // Note: Notion API now returns "data_source" instead of "database" for object type
   const databases = response.results.filter(
     (result) => (result.object === "database" || result.object === "data_source") && "title" in result

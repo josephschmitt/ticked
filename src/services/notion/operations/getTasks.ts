@@ -163,21 +163,22 @@ function pageToTask(
 }
 
 /**
- * Fetch tasks from a Notion database using field mapping.
+ * Fetch tasks from a Notion data source using field mapping.
+ * Note: As of Notion API 2025-09-03, databases are now called "data sources".
  */
 export async function getTasks(
-  databaseId: string,
+  dataSourceId: string,
   fieldMapping: FieldMapping
 ): Promise<Task[]> {
   const client = getNotionClient();
 
-  // Use the pages API to query the database
+  // Use the data sources API to query pages
   const response = (await (client as unknown as {
-    databases: {
-      query: (args: { database_id: string; page_size?: number; sorts?: Array<{ timestamp: string; direction: string }> }) => Promise<QueryResponse>;
+    dataSources: {
+      query: (args: { data_source_id: string; page_size?: number; sorts?: Array<{ timestamp: string; direction: string }> }) => Promise<QueryResponse>;
     };
-  }).databases.query({
-    database_id: databaseId,
+  }).dataSources.query({
+    data_source_id: dataSourceId,
     page_size: 100,
     sorts: [
       {
@@ -209,16 +210,17 @@ export async function getTasks(
 }
 
 /**
- * Get unique status values from a database.
+ * Get unique status values from a data source.
+ * Note: As of Notion API 2025-09-03, databases are now called "data sources".
  */
 export async function getStatuses(
-  databaseId: string,
+  dataSourceId: string,
   statusPropertyId: string
 ): Promise<TaskStatus[]> {
   const client = getNotionClient();
 
-  const database = (await client.databases.retrieve({
-    database_id: databaseId,
+  const dataSource = (await client.dataSources.retrieve({
+    data_source_id: dataSourceId,
   })) as unknown as {
     properties: Record<
       string,
@@ -234,7 +236,7 @@ export async function getStatuses(
   };
 
   // Find the status property
-  const statusProp = Object.values(database.properties).find(
+  const statusProp = Object.values(dataSource.properties).find(
     (prop) => prop.id === statusPropertyId
   );
 

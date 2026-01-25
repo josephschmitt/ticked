@@ -39,22 +39,32 @@ interface DatabaseResponse {
 }
 
 /**
- * Fetch the schema (properties) of a database.
+ * Fetch the schema (properties) of a data source.
+ * Note: As of Notion API 2025-09-03, databases are now called "data sources".
  */
 export async function getDatabaseSchema(
-  databaseId: string
+  dataSourceId: string
 ): Promise<DatabaseSchema> {
   const client = getNotionClient();
 
-  const database = (await client.databases.retrieve({
-    database_id: databaseId,
-  })) as unknown as DatabaseResponse;
+  let dataSource: DatabaseResponse;
+  try {
+    dataSource = (await client.dataSources.retrieve({
+      data_source_id: dataSourceId,
+    })) as unknown as DatabaseResponse;
+  } catch (error) {
+    console.error("Failed to retrieve data source schema:", error);
+    if (error instanceof Error) {
+      throw new Error(`Notion API error: ${error.message}`);
+    }
+    throw error;
+  }
 
   // Extract title
-  const title = database.title?.map((t) => t.plain_text).join("") || "Untitled";
+  const title = dataSource.title?.map((t) => t.plain_text).join("") || "Untitled";
 
   // Transform properties
-  const properties: DatabaseProperty[] = Object.entries(database.properties).map(
+  const properties: DatabaseProperty[] = Object.entries(dataSource.properties).map(
     ([name, prop]) => {
       const baseProperty: DatabaseProperty = {
         id: prop.id,
@@ -109,7 +119,7 @@ export async function getDatabaseSchema(
   );
 
   return {
-    id: database.id,
+    id: dataSource.id,
     title,
     properties,
   };
