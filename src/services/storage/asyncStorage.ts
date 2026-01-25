@@ -92,12 +92,31 @@ export async function getFieldMapping(): Promise<FieldMapping | null> {
 }
 
 /**
+ * Store custom list name.
+ */
+export async function storeCustomListName(name: string | null): Promise<void> {
+  if (name) {
+    await setAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME, name);
+  } else {
+    await deleteAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME);
+  }
+}
+
+/**
+ * Get custom list name.
+ */
+export async function getCustomListName(): Promise<string | null> {
+  return getAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME);
+}
+
+/**
  * Clear all configuration (used when signing out or reconfiguring).
  */
 export async function clearAllConfig(): Promise<void> {
   await Promise.all([
     deleteAsyncItem(ASYNC_STORAGE_KEYS.SELECTED_DATABASE_ID),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.SELECTED_DATABASE_NAME),
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.FIELD_MAPPING),
   ]);
 }

@@ -102,6 +102,7 @@ export default function SettingsScreen() {
   const workspaceName = useAuthStore((state) => state.workspaceName);
   const clearConfig = useConfigStore((state) => state.clearConfig);
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
+  const customListName = useConfigStore((state) => state.customListName);
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
@@ -111,6 +112,11 @@ export default function SettingsScreen() {
   const handleReconfigureFields = useCallback(() => {
     Haptics.selectionAsync();
     router.push("/(main)/settings/field-mapping");
+  }, [router]);
+
+  const handleChangeListName = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push("/(main)/settings/list-name");
   }, [router]);
 
   const handleDismiss = useCallback(() => {
@@ -201,6 +207,11 @@ export default function SettingsScreen() {
             label="Database"
             value={databaseName || "Not selected"}
             onPress={handleChangeDatabase}
+          />
+          <SettingsRow
+            label="List Name"
+            value={customListName || databaseName || "Not set"}
+            onPress={handleChangeListName}
           />
           <SettingsRow
             label="Field Mapping"

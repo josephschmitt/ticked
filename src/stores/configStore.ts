@@ -4,6 +4,8 @@ import {
   getDatabaseConfig,
   storeFieldMapping,
   getFieldMapping,
+  storeCustomListName,
+  getCustomListName,
   clearAllConfig,
 } from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
@@ -11,10 +13,12 @@ import type { FieldMapping } from "@/types/fieldMapping";
 interface ConfigState {
   selectedDatabaseId: string | null;
   selectedDatabaseName: string | null;
+  customListName: string | null;
   fieldMapping: FieldMapping | null;
   isConfigured: boolean;
   isLoading: boolean;
   setDatabase: (id: string, name: string) => Promise<void>;
+  setCustomListName: (name: string | null) => Promise<void>;
   setFieldMapping: (mapping: FieldMapping) => Promise<void>;
   clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
@@ -24,6 +28,7 @@ interface ConfigState {
 export const useConfigStore = create<ConfigState>((set, get) => ({
   selectedDatabaseId: null,
   selectedDatabaseName: null,
+  customListName: null,
   fieldMapping: null,
   isConfigured: false,
   isLoading: true,
@@ -37,6 +42,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       selectedDatabaseId: id,
       selectedDatabaseName: name,
     });
+  },
+
+  setCustomListName: async (name) => {
+    // Store in async storage
+    await storeCustomListName(name);
+
+    // Update state
+    set({ customListName: name });
   },
 
   setFieldMapping: async (mapping) => {
@@ -58,6 +71,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     set({
       selectedDatabaseId: null,
       selectedDatabaseName: null,
+      customListName: null,
       fieldMapping: null,
       isConfigured: false,
     });
@@ -67,8 +81,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [dbConfig, fieldMapping] = await Promise.all([
+      const [dbConfig, customListName, fieldMapping] = await Promise.all([
         getDatabaseConfig(),
+        getCustomListName(),
         getFieldMapping(),
       ]);
 
@@ -81,6 +96,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       set({
         selectedDatabaseId: dbConfig.databaseId,
         selectedDatabaseName: dbConfig.databaseName,
+        customListName,
         fieldMapping,
         isConfigured,
         isLoading: false,

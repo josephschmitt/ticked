@@ -10,6 +10,7 @@ export const SECURE_STORAGE_KEYS = {
 export const ASYNC_STORAGE_KEYS = {
   SELECTED_DATABASE_ID: "selected_database_id",
   SELECTED_DATABASE_NAME: "selected_database_name",
+  CUSTOM_LIST_NAME: "custom_list_name",
   FIELD_MAPPING: "field_mapping",
   THEME_PREFERENCE: "theme_preference",
   ONBOARDING_COMPLETE: "onboarding_complete",

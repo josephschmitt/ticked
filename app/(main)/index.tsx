@@ -12,6 +12,7 @@ import { BRAND_COLORS } from "@/constants/colors";
 export default function TaskListScreen() {
   const router = useRouter();
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
+  const customListName = useConfigStore((state) => state.customListName);
   const { groups, isLoading, error, refetch, isRefetching } = useGroupedTasks();
   const { totalCount: doneCount } = useCompletedTasks();
 
@@ -34,7 +35,7 @@ export default function TaskListScreen() {
     <>
       <Stack.Screen
         options={{
-          title: databaseName || "Tasks",
+          title: customListName || databaseName || "Tasks",
           headerRight: () => (
             <Pressable
               onPress={handleOpenSettings}
