@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
 import { BRAND_COLORS, IOS_BACKGROUNDS } from "@/constants/colors";
 
-export default function MainLayout() {
+export default function SettingsLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -13,21 +13,16 @@ export default function MainLayout() {
     <Stack
       screenOptions={{
         headerShown: true,
+        headerBackTitle: "Settings",
         headerStyle: { backgroundColor: headerBg },
         headerTintColor: BRAND_COLORS.primary,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: contentBg },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Tasks" }} />
-      <Stack.Screen name="done" options={{ title: "Done" }} />
-      <Stack.Screen
-        name="settings"
-        options={{
-          headerShown: false,
-          presentation: "modal",
-        }}
-      />
+      <Stack.Screen name="index" options={{ title: "Settings" }} />
+      <Stack.Screen name="databases" options={{ title: "Select Database" }} />
+      <Stack.Screen name="field-mapping" options={{ title: "Configure Fields" }} />
     </Stack>
   );
 }

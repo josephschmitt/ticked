@@ -9,9 +9,9 @@ import {
   useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, X } from "lucide-react-native";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import { clearNotionClient } from "@/services/notion/client";
@@ -105,12 +105,17 @@ export default function SettingsScreen() {
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
-    router.push("/(setup)/databases");
+    router.push("/(main)/settings/databases");
   }, [router]);
 
   const handleReconfigureFields = useCallback(() => {
     Haptics.selectionAsync();
-    router.push("/(setup)/field-mapping");
+    router.push("/(main)/settings/field-mapping");
+  }, [router]);
+
+  const handleDismiss = useCallback(() => {
+    Haptics.selectionAsync();
+    router.dismiss();
   }, [router]);
 
   const handleSignOut = useCallback(() => {
@@ -162,9 +167,24 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 20 }}>
-        {/* Account Section */}
+    <>
+      <Stack.Screen
+        options={{
+          title: "Settings",
+          headerLeft: () => (
+            <Pressable
+              onPress={handleDismiss}
+              className="p-2"
+              hitSlop={8}
+            >
+              <X size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
+            </Pressable>
+          ),
+        }}
+      />
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 20 }}>
+          {/* Account Section */}
         <SettingsSection title="Account">
           <SettingsRow
             label="Workspace"
@@ -206,7 +226,8 @@ export default function SettingsScreen() {
             Ticked v1.0.0
           </Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
