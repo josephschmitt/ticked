@@ -2,8 +2,8 @@ import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable, u
 import { AlertCircle, CheckCircle2, ChevronRight } from "lucide-react-native";
 import type { TaskGroup as TaskGroupType } from "@/types/task";
 import { TaskGroup } from "./TaskGroup";
-import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
 interface TaskListProps {
   groups: TaskGroupType[];
@@ -79,6 +79,8 @@ export function TaskList({
   }
 
   const chevronColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3;
+  const { shouldConstrain } = useResponsiveLayout();
+  const cardRadius = shouldConstrain ? "rounded-3xl" : "rounded-[32px]";
 
   return (
     <ScrollView
@@ -89,35 +91,33 @@ export function TaskList({
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
       }
     >
-      <ResponsiveContainer>
-        {groups.map((group) => (
-          <TaskGroup
-            key={group.status.id}
-            group={group}
-            defaultExpanded={group.status.group !== "complete"}
-          />
-        ))}
+      {groups.map((group) => (
+        <TaskGroup
+          key={group.status.id}
+          group={group}
+          defaultExpanded={group.status.group !== "complete"}
+        />
+      ))}
 
-        {onDonePress && (
-          <View className="mx-0 py-3 rounded-[32px] bg-background-elevated dark:bg-background-dark-elevated">
-            <Pressable
-              onPress={onDonePress}
-              className="flex-row items-center pl-6 pr-6 py-3 min-h-[44px] active:opacity-70"
-            >
-              <CheckCircle2 size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
-              <Text className="flex-1 ml-3 text-[17px] text-label-primary dark:text-label-dark-primary">
-                Done
+      {onDonePress && (
+        <View className={`mx-0 py-3 ${cardRadius} bg-background-elevated dark:bg-background-dark-elevated`}>
+          <Pressable
+            onPress={onDonePress}
+            className="flex-row items-center pl-6 pr-6 py-3 min-h-[44px] active:opacity-70"
+          >
+            <CheckCircle2 size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
+            <Text className="flex-1 ml-3 text-[17px] text-label-primary dark:text-label-dark-primary">
+              Done
+            </Text>
+            {doneCount !== undefined && doneCount > 0 && (
+              <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary mr-2">
+                {doneCount}
               </Text>
-              {doneCount !== undefined && doneCount > 0 && (
-                <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary mr-2">
-                  {doneCount}
-                </Text>
-              )}
-              <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
-            </Pressable>
-          </View>
-        )}
-      </ResponsiveContainer>
+            )}
+            <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
+          </Pressable>
+        </View>
+      )}
     </ScrollView>
   );
 }
