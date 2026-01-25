@@ -46,16 +46,28 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
 
   const displayDate = formatDate(task.doDate) || formatDate(task.dueDate);
 
+  // Build accessibility label
+  const accessibilityParts = [task.title, `Status: ${task.status.name}`];
+  if (task.project) accessibilityParts.push(`Project: ${task.project}`);
+  if (task.taskType) accessibilityParts.push(`Type: ${task.taskType}`);
+  if (displayDate) accessibilityParts.push(displayDate);
+  const accessibilityLabel = accessibilityParts.join(". ");
+
   return (
     <Pressable
       onPress={handlePress}
       onLongPress={handleLongPress}
       className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-2 border border-gray-100 dark:border-gray-700 active:opacity-80"
+      accessible={true}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Double tap to open in Notion"
+      accessibilityRole="button"
     >
       <View className="flex-row items-start">
         {/* Status indicator */}
         <View
           className={`w-3 h-3 rounded-full mt-1.5 mr-3 ${colorClass}`}
+          accessible={false}
         />
 
         {/* Content */}
@@ -63,12 +75,13 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
           <Text
             className="text-base font-medium text-gray-900 dark:text-white leading-tight"
             numberOfLines={2}
+            accessible={false}
           >
             {task.title}
           </Text>
 
           {/* Meta row */}
-          <View className="flex-row flex-wrap items-center mt-2 gap-2">
+          <View className="flex-row flex-wrap items-center mt-2 gap-2" accessible={false}>
             {task.project && (
               <View className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
                 <Text className="text-xs text-gray-600 dark:text-gray-300">
@@ -92,7 +105,9 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
             )}
 
             {task.url && (
-              <Text className="text-xs text-blue-500">🔗</Text>
+              <Text className="text-xs text-blue-500" accessibilityLabel="Has link">
+                🔗
+              </Text>
             )}
           </View>
         </View>
