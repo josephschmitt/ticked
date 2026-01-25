@@ -79,6 +79,8 @@ Maps Notion database properties to app fields (`src/types/fieldMapping.ts`):
 | doDate | date | No |
 | dueDate | date | No |
 | url | url | No |
+| creationDate | created_time, date | No |
+| completedDate | date | No |
 
 ### Key Types
 - `Task` / `TaskStatus` / `StatusGroup` - App's internal task representation (`src/types/task.ts`)
@@ -97,3 +99,16 @@ The Notion integration must be set to "Public" type for OAuth to work.
 TypeScript paths configured in tsconfig.json:
 - `@/*` → `./src/*`
 - `@/components/*`, `@/services/*`, `@/stores/*`, `@/hooks/*`, `@/types/*`
+
+## Git Commands
+
+Expo Router uses parentheses in folder names for route groups (e.g., `app/(auth)/`, `app/(main)/`). Always quote these paths in git commands to prevent shell interpretation:
+
+```bash
+# Correct
+git add "app/(setup)/field-mapping.tsx"
+git diff "app/(auth)/"
+
+# Incorrect - parentheses may cause errors
+git add app/(setup)/field-mapping.tsx
+```
