@@ -1,11 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { getTasks, getStatuses } from "@/services/notion/operations/getTasks";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { getTasks, getStatuses, getTasksPaginated } from "@/services/notion/operations/getTasks";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import type { Task, TaskStatus, TaskGroup, DateTaskGroup, StatusGroup } from "@/types/task";
 
 export const TASKS_QUERY_KEY = ["tasks"] as const;
 export const STATUSES_QUERY_KEY = ["statuses"] as const;
+export const COMPLETED_TASKS_QUERY_KEY = ["completedTasks"] as const;
 
 /**
  * Hook to fetch tasks from the configured database.
@@ -191,23 +192,42 @@ export function useGroupedTasks() {
 }
 
 /**
- * Hook that provides completed tasks grouped by completion date.
+ * Hook that provides completed tasks with infinite scroll support.
+ * Tasks are grouped by completion date, descending (most recent first).
  */
 export function useCompletedTasks() {
-  const tasksQuery = useTasks();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const databaseId = useConfigStore((state) => state.selectedDatabaseId);
+  const fieldMapping = useConfigStore((state) => state.fieldMapping);
 
-  const groups = tasksQuery.data
-    ? groupTasksByCompletionDate(tasksQuery.data)
-    : [];
+  const query = useInfiniteQuery({
+    queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId],
+    queryFn: async ({ pageParam }) => {
+      if (!databaseId || !fieldMapping) {
+        throw new Error("Database not configured");
+      }
+      return getTasksPaginated(databaseId, fieldMapping, pageParam, 50);
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
+    enabled: isAuthenticated && !!databaseId && !!fieldMapping,
+    staleTime: 1000 * 30,
+  });
 
+  // Flatten all pages and filter to only completed tasks, then group by date
+  const allTasks = query.data?.pages.flatMap((page) => page.tasks) ?? [];
+  const groups = groupTasksByCompletionDate(allTasks);
   const totalCount = groups.reduce((acc, g) => acc + g.tasks.length, 0);
 
   return {
     groups,
     totalCount,
-    isLoading: tasksQuery.isLoading,
-    error: tasksQuery.error,
-    refetch: tasksQuery.refetch,
-    isRefetching: tasksQuery.isRefetching,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+    isRefetching: query.isRefetching,
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
   };
 }

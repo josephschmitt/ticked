@@ -1,18 +1,47 @@
 import { useCallback } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, RefreshControl, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useCompletedTasks } from "@/hooks/queries/useTasks";
 import { DateTaskGroup } from "@/components/tasks/DateTaskGroup";
+import type { DateTaskGroup as DateTaskGroupType } from "@/types/task";
 
 export default function DoneScreen() {
-  const { groups, isLoading, error, refetch, isRefetching } = useCompletedTasks();
+  const {
+    groups,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCompletedTasks();
 
   const handleRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await refetch();
   }, [refetch]);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderItem = useCallback(({ item }: { item: DateTaskGroupType }) => (
+    <DateTaskGroup group={item} defaultExpanded={true} />
+  ), []);
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View className="py-4 items-center">
+        <ActivityIndicator size="small" color="#6366f1" />
+      </View>
+    );
+  }, [isFetchingNextPage]);
 
   // Loading state
   if (isLoading && groups.length === 0) {
@@ -58,21 +87,25 @@ export default function DoneScreen() {
       <>
         <Stack.Screen options={{ title: "Done" }} />
         <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={["bottom"]}>
-          <ScrollView
-            className="flex-1"
+          <FlatList
+            data={[]}
+            renderItem={() => null}
             contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24 }}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
             }
-          >
-            <Text className="text-4xl mb-4">📭</Text>
-            <Text className="text-lg font-medium text-gray-900 dark:text-white text-center mb-2">
-              No completed tasks yet
-            </Text>
-            <Text className="text-gray-500 dark:text-gray-400 text-center">
-              Completed tasks will appear here.
-            </Text>
-          </ScrollView>
+            ListEmptyComponent={
+              <View className="items-center">
+                <Text className="text-4xl mb-4">📭</Text>
+                <Text className="text-lg font-medium text-gray-900 dark:text-white text-center mb-2">
+                  No completed tasks yet
+                </Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-center">
+                  Completed tasks will appear here.
+                </Text>
+              </View>
+            }
+          />
         </SafeAreaView>
       </>
     );
@@ -82,21 +115,18 @@ export default function DoneScreen() {
     <>
       <Stack.Screen options={{ title: "Done" }} />
       <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={["bottom"]}>
-        <ScrollView
-          className="flex-1"
+        <FlatList
+          data={groups}
+          keyExtractor={(item) => item.date || "unknown"}
+          renderItem={renderItem}
           contentContainerStyle={{ padding: 16 }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
           }
-        >
-          {groups.map((group) => (
-            <DateTaskGroup
-              key={group.date || "unknown"}
-              group={group}
-              defaultExpanded={true}
-            />
-          ))}
-        </ScrollView>
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+        />
       </SafeAreaView>
     </>
   );

@@ -30,6 +30,12 @@ interface QueryResponse {
   next_cursor: string | null;
 }
 
+export interface PaginatedTasksResult {
+  tasks: Task[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
 interface PageTitleResponse {
   id: string;
   properties: Record<string, { type: string; title?: Array<{ plain_text: string }> }>;
@@ -315,6 +321,87 @@ export async function getTasks(
   }
 
   return tasks;
+}
+
+/**
+ * Fetch tasks with pagination support.
+ */
+export async function getTasksPaginated(
+  dataSourceId: string,
+  fieldMapping: FieldMapping,
+  cursor?: string | null,
+  pageSize: number = 50
+): Promise<PaginatedTasksResult> {
+  const client = getNotionClient();
+
+  // Build query args
+  const queryArgs: {
+    data_source_id: string;
+    page_size: number;
+    start_cursor?: string;
+    sorts: Array<{ timestamp: string; direction: string }>;
+  } = {
+    data_source_id: dataSourceId,
+    page_size: pageSize,
+    sorts: [
+      {
+        timestamp: "last_edited_time",
+        direction: "descending",
+      },
+    ],
+  };
+
+  if (cursor) {
+    queryArgs.start_cursor = cursor;
+  }
+
+  const response = (await (client as unknown as {
+    dataSources: {
+      query: (args: typeof queryArgs) => Promise<QueryResponse>;
+    };
+  }).dataSources.query(queryArgs)) as QueryResponse;
+
+  // First pass: collect all relation IDs we need to resolve
+  const relationIds = new Set<string>();
+  const relationPropertyIds = [fieldMapping.taskType, fieldMapping.project].filter(Boolean) as string[];
+
+  for (const page of response.results) {
+    for (const prop of Object.values(page.properties)) {
+      if (prop.type === "relation" && prop.relation && relationPropertyIds.includes(prop.id || "")) {
+        for (const rel of prop.relation) {
+          relationIds.add(rel.id);
+        }
+      }
+    }
+  }
+
+  // Fetch titles for all related pages
+  const relationTitles = relationIds.size > 0
+    ? await getPageTitles(Array.from(relationIds))
+    : new Map<string, string>();
+
+  // Second pass: build tasks with resolved relation titles
+  const tasks: Task[] = [];
+
+  for (const page of response.results) {
+    const propertyMap = new Map<string, PropertyValue>();
+    for (const [_name, prop] of Object.entries(page.properties)) {
+      if (prop.id) {
+        propertyMap.set(prop.id, prop);
+      }
+    }
+
+    const task = pageToTask(page, fieldMapping, propertyMap, relationTitles);
+    if (task) {
+      tasks.push(task);
+    }
+  }
+
+  return {
+    tasks,
+    hasMore: response.has_more,
+    nextCursor: response.next_cursor,
+  };
 }
 
 /**
