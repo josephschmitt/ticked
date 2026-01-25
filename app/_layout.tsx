@@ -25,6 +25,39 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Inner component that uses hooks requiring QueryClientProvider context.
+ */
+function AppContent() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  // Auto-sync on reconnect (requires QueryClientProvider)
+  useSyncOnReconnect();
+
+  const contentBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <StatusBar style="auto" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: contentBg,
+          },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(setup)" />
+        <Stack.Screen name="(main)" />
+      </Stack>
+      <ToastContainer />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -33,11 +66,8 @@ export default function RootLayout() {
   const hydrateTaskCache = useTaskCacheStore((state) => state.hydrate);
   const hydrateMutationQueue = useMutationQueueStore((state) => state.hydrate);
 
-  // Initialize network state monitoring
+  // Initialize network state monitoring (does not require QueryClient)
   useNetworkStateInit();
-
-  // Auto-sync on reconnect
-  useSyncOnReconnect();
 
   // Hydrate stores on app start
   useEffect(() => {
@@ -56,28 +86,10 @@ export default function RootLayout() {
     );
   }, [isDark]);
 
-  const contentBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <View style={StyleSheet.absoluteFill}>
-          <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: contentBg,
-              },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(setup)" />
-            <Stack.Screen name="(main)" />
-          </Stack>
-          <ToastContainer />
-        </View>
+        <AppContent />
       </QueryClientProvider>
     </ErrorBoundary>
   );
