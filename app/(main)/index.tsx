@@ -1,11 +1,13 @@
 import { useCallback } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Settings } from "lucide-react-native";
 import { useGroupedTasks, useCompletedTasks } from "@/hooks/queries/useTasks";
 import { useConfigStore } from "@/stores/configStore";
 import { TaskList } from "@/components/tasks/TaskList";
+import { BRAND_COLORS } from "@/constants/colors";
 
 export default function TaskListScreen() {
   const router = useRouter();
@@ -39,12 +41,12 @@ export default function TaskListScreen() {
               className="p-2"
               hitSlop={8}
             >
-              <Text className="text-2xl">⚙️</Text>
+              <Settings size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
             </Pressable>
           ),
         }}
       />
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <TaskList
           groups={groups}
           isLoading={isLoading}

@@ -1,8 +1,11 @@
 import { useState, useCallback } from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
+import { ChevronDown, ChevronRight } from "lucide-react-native";
 import type { DateTaskGroup as DateTaskGroupType } from "@/types/task";
-import { TaskCard } from "./TaskCard";
+import { TaskRow } from "./TaskRow";
+import { Separator } from "@/components/ui/Separator";
+import { IOS_GRAYS } from "@/constants/colors";
 
 interface DateTaskGroupProps {
   group: DateTaskGroupType;
@@ -11,6 +14,8 @@ interface DateTaskGroupProps {
 
 export function DateTaskGroup({ group, defaultExpanded = true }: DateTaskGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -18,35 +23,40 @@ export function DateTaskGroup({ group, defaultExpanded = true }: DateTaskGroupPr
   }, []);
 
   const taskCount = group.tasks.length;
+  const chevronColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
   return (
-    <View className="mb-4">
-      {/* Header */}
+    <View className="mb-6">
+      {/* Section header */}
       <Pressable
         onPress={toggleExpanded}
-        className="flex-row items-center justify-between py-2 px-1"
+        className="flex-row items-center justify-between px-4 pb-2"
+        accessibilityRole="button"
+        accessibilityLabel={`${group.label}, ${taskCount} tasks, ${isExpanded ? "expanded" : "collapsed"}`}
+        accessibilityHint="Double tap to toggle section"
       >
-        <View className="flex-row items-center">
-          <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            {group.label}
+        <Text className="text-[22px] font-bold text-label-primary dark:text-label-dark-primary">
+          {group.label}{" "}
+          <Text className="font-normal text-label-secondary dark:text-label-dark-secondary">
+            {taskCount}
           </Text>
-          <View className="ml-2 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-            <Text className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-              {taskCount}
-            </Text>
-          </View>
-        </View>
-
-        <Text className="text-gray-400 text-sm">
-          {isExpanded ? "▼" : "▶"}
         </Text>
+
+        {isExpanded ? (
+          <ChevronDown size={22} color={chevronColor} strokeWidth={2.5} />
+        ) : (
+          <ChevronRight size={22} color={chevronColor} strokeWidth={2.5} />
+        )}
       </Pressable>
 
-      {/* Tasks */}
+      {/* Grouped container */}
       {isExpanded && (
-        <View className="mt-1">
-          {group.tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+        <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
+          {group.tasks.map((task, index) => (
+            <View key={task.id}>
+              <TaskRow task={task} />
+              {index < group.tasks.length - 1 && <Separator />}
+            </View>
           ))}
         </View>
       )}

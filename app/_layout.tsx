@@ -8,6 +8,7 @@ import * as SystemUI from "expo-system-ui";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { IOS_BACKGROUNDS } from "@/constants/colors";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,7 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const hydrateConfig = useConfigStore((state) => state.hydrate);
 
@@ -28,12 +30,14 @@ export default function RootLayout() {
     Promise.all([hydrateAuth(), hydrateConfig()]);
   }, [hydrateAuth, hydrateConfig]);
 
-  // Set system UI background color based on theme
+  // Set system UI background color based on theme (iOS grouped background)
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(
-      colorScheme === "dark" ? "#000000" : "#ffffff"
+      isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light
     );
-  }, [colorScheme]);
+  }, [isDark]);
+
+  const contentBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
 
   return (
     <ErrorBoundary>
@@ -43,7 +47,7 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: {
-              backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff",
+              backgroundColor: contentBg,
             },
           }}
         >

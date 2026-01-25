@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -17,6 +18,7 @@ import { filterPropertiesByType } from "@/services/notion/operations/getDatabase
 import type { FieldMapping, AppField } from "@/types/fieldMapping";
 import { APP_FIELD_CONFIG } from "@/types/fieldMapping";
 import type { DatabaseProperty } from "@/types/database";
+import { BRAND_COLORS } from "@/constants/colors";
 
 const FIELD_ORDER: AppField[] = [
   "taskName",
@@ -32,6 +34,9 @@ const FIELD_ORDER: AppField[] = [
 
 export default function FieldMappingScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const setFieldMapping = useConfigStore((state) => state.setFieldMapping);
@@ -136,10 +141,10 @@ export default function FieldMappingScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text className="mt-4 text-gray-600 dark:text-gray-400">
+          <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+          <Text className="mt-4 text-label-secondary dark:text-label-dark-secondary">
             Loading database schema...
           </Text>
         </View>
@@ -149,21 +154,22 @@ export default function FieldMappingScreen() {
 
   if (error || !schema) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-red-600 dark:text-red-400 text-lg text-center mb-4">
+          <Text className="text-ios-red text-lg text-center mb-4">
             Failed to load database schema
           </Text>
           {error && (
-            <Text className="text-gray-500 dark:text-gray-400 text-center text-sm mb-4">
+            <Text className="text-label-secondary dark:text-label-dark-secondary text-center text-[15px] mb-4">
               {error instanceof Error ? error.message : "Unknown error"}
             </Text>
           )}
           <Pressable
             onPress={() => router.back()}
-            className="bg-primary-600 px-6 py-3 rounded-xl"
+            className="px-6 py-3 rounded-[10px]"
+            style={{ backgroundColor: BRAND_COLORS.primary }}
           >
-            <Text className="text-white font-medium">Go Back</Text>
+            <Text className="text-white font-semibold text-[17px]">Go Back</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -171,42 +177,45 @@ export default function FieldMappingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+    <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
       <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 16 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingTop: 20, paddingBottom: 24 }}
       >
-        <Text className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary px-4 mb-1">
           Configure how properties in "{databaseName}" map to the app's fields.
         </Text>
-        <Text className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Fields marked with <Text className="text-red-500">*</Text> are required.
+        <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary px-4 mb-4">
+          Fields marked with <Text className="text-ios-red">*</Text> are required.
         </Text>
 
-        {FIELD_ORDER.map((field) => (
-          <FieldMappingRow
-            key={field}
-            appField={field}
-            selectedProperty={getSelectedProperty(field)}
-            availableProperties={propertiesByField[field] || []}
-            onPress={() => openPicker(field)}
-          />
-        ))}
+        <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
+          {FIELD_ORDER.map((field, index) => (
+            <FieldMappingRow
+              key={field}
+              appField={field}
+              selectedProperty={getSelectedProperty(field)}
+              availableProperties={propertiesByField[field] || []}
+              onPress={() => openPicker(field)}
+              isLast={index === FIELD_ORDER.length - 1}
+            />
+          ))}
+        </View>
       </ScrollView>
 
       {/* Continue button */}
-      <View className="px-4 py-4 border-t border-gray-200 dark:border-gray-800">
+      <View className="px-4 py-4 border-t border-separator dark:border-separator-dark bg-background-elevated dark:bg-background-dark-elevated">
         <Pressable
           onPress={handleContinue}
           disabled={!canContinue}
-          className={`
-            py-4 rounded-xl items-center
-            ${canContinue ? "bg-primary-600 active:bg-primary-700" : "bg-gray-300 dark:bg-gray-700"}
-          `}
+          className="py-4 rounded-[10px] items-center"
+          style={{
+            backgroundColor: canContinue ? BRAND_COLORS.primary : (isDark ? '#3A3A3C' : '#D1D1D6'),
+          }}
         >
           <Text
-            className={`text-lg font-semibold ${
-              canContinue ? "text-white" : "text-gray-500 dark:text-gray-400"
+            className={`text-[17px] font-semibold ${
+              canContinue ? "text-white" : "text-label-tertiary dark:text-label-dark-tertiary"
             }`}
           >
             Start Using App

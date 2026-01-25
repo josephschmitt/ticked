@@ -6,16 +6,22 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Database } from "lucide-react-native";
 import { useDatabases } from "@/hooks/queries/useDatabases";
 import { useConfigStore } from "@/stores/configStore";
 import { DatabaseCard } from "@/components/setup/DatabaseCard";
+import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
 export default function DatabasesScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   const { data: databases, isLoading, error, refetch } = useDatabases();
   const setDatabase = useConfigStore((state) => state.setDatabase);
   const currentDatabaseId = useConfigStore((state) => state.selectedDatabaseId);
@@ -47,12 +53,14 @@ export default function DatabasesScreen() {
     router.push("/(setup)/field-mapping");
   }, [selectedId, databases, setDatabase, router]);
 
+  const iconColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
+
   if (isLoading && !databases) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text className="mt-4 text-gray-600 dark:text-gray-400">
+          <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+          <Text className="mt-4 text-label-secondary dark:text-label-dark-secondary">
             Loading your databases...
           </Text>
         </View>
@@ -62,19 +70,20 @@ export default function DatabasesScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-red-600 dark:text-red-400 text-lg text-center mb-4">
+          <Text className="text-ios-red text-lg text-center mb-4">
             Failed to load databases
           </Text>
-          <Text className="text-gray-500 dark:text-gray-400 text-center mb-6">
+          <Text className="text-label-secondary dark:text-label-dark-secondary text-center mb-6">
             {error instanceof Error ? error.message : "Unknown error"}
           </Text>
           <Pressable
             onPress={() => refetch()}
-            className="bg-primary-600 px-6 py-3 rounded-xl"
+            className="px-6 py-3 rounded-[10px]"
+            style={{ backgroundColor: BRAND_COLORS.primary }}
           >
-            <Text className="text-white font-medium">Try Again</Text>
+            <Text className="text-white font-semibold text-[17px]">Try Again</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -83,21 +92,22 @@ export default function DatabasesScreen() {
 
   if (!databases || databases.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-2xl mb-4">📋</Text>
-          <Text className="text-lg font-medium text-gray-900 dark:text-white text-center mb-2">
+          <Database size={48} color={iconColor} strokeWidth={1.5} />
+          <Text className="text-lg font-medium text-label-primary dark:text-label-dark-primary text-center mt-4 mb-2">
             No databases found
           </Text>
-          <Text className="text-gray-500 dark:text-gray-400 text-center mb-6">
+          <Text className="text-label-secondary dark:text-label-dark-secondary text-center mb-6">
             Make sure you've shared at least one database with this integration
             in Notion.
           </Text>
           <Pressable
             onPress={() => refetch()}
-            className="bg-primary-600 px-6 py-3 rounded-xl"
+            className="px-6 py-3 rounded-[10px]"
+            style={{ backgroundColor: BRAND_COLORS.primary }}
           >
-            <Text className="text-white font-medium">Refresh</Text>
+            <Text className="text-white font-semibold text-[17px]">Refresh</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -105,42 +115,45 @@ export default function DatabasesScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-black" edges={["bottom"]}>
+    <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
       <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 16 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingTop: 20, paddingBottom: 24 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
         }
       >
-        <Text className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary px-4 mb-4">
           Select the database you want to use for your tasks. You can change
           this later in settings.
         </Text>
 
-        {databases.map((database) => (
-          <DatabaseCard
-            key={database.id}
-            database={database}
-            isSelected={selectedId === database.id}
-            onSelect={() => handleSelect(database.id)}
-          />
-        ))}
+        <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
+          {databases.map((database, index) => (
+            <DatabaseCard
+              key={database.id}
+              database={database}
+              isSelected={selectedId === database.id}
+              onSelect={() => handleSelect(database.id)}
+              isLast={index === databases.length - 1}
+            />
+          ))}
+        </View>
       </ScrollView>
 
       {/* Continue button */}
-      <View className="px-4 py-4 border-t border-gray-200 dark:border-gray-800">
+      <View className="px-4 py-4 border-t border-separator dark:border-separator-dark bg-background-elevated dark:bg-background-dark-elevated">
         <Pressable
           onPress={handleContinue}
           disabled={!selectedId}
-          className={`
-            py-4 rounded-xl items-center
-            ${selectedId ? "bg-primary-600 active:bg-primary-700" : "bg-gray-300 dark:bg-gray-700"}
-          `}
+          className="py-4 rounded-[10px] items-center"
+          style={{
+            backgroundColor: selectedId ? BRAND_COLORS.primary : (isDark ? '#3A3A3C' : '#D1D1D6'),
+          }}
         >
           <Text
-            className={`text-lg font-semibold ${
-              selectedId ? "text-white" : "text-gray-500 dark:text-gray-400"
+            className={`text-[17px] font-semibold ${
+              selectedId ? "text-white" : "text-label-tertiary dark:text-label-dark-tertiary"
             }`}
           >
             Continue

@@ -1,21 +1,26 @@
 import { useState, useCallback } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { CheckCircle2 } from "lucide-react-native";
 import {
   buildAuthorizationUrl,
   exchangeCodeForTokens,
   getOAuthCallbackUrl,
 } from "@/services/auth/oauth";
 import { useAuthStore } from "@/stores/authStore";
+import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
 // Required for web browser redirect
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LandingScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,42 +86,47 @@ export default function LandingScreen() {
   }, [workerCallbackUrl, setAuth, router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-black">
+    <SafeAreaView className="flex-1 bg-background-primary dark:bg-background-dark-primary">
       <View className="flex-1 items-center justify-center px-6">
         <View className="mb-8">
-          <Text className="text-5xl text-center mb-2">✓</Text>
+          <CheckCircle2
+            size={64}
+            color={BRAND_COLORS.primary}
+            strokeWidth={1.5}
+          />
         </View>
 
-        <Text className="text-4xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+        <Text className="text-4xl font-bold text-label-primary dark:text-label-dark-primary mb-4 text-center">
           Ticked
         </Text>
 
-        <Text className="text-lg text-gray-600 dark:text-gray-400 text-center mb-12 px-4">
+        <Text className="text-lg text-label-secondary dark:text-label-dark-secondary text-center mb-12 px-4">
           A native todo experience powered by your Notion workspace
         </Text>
 
         {error && (
-          <View className="mb-6 px-4 py-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-            <Text className="text-red-600 dark:text-red-400 text-center">
+          <View className="mb-6 px-4 py-3 bg-ios-red/10 rounded-[10px]">
+            <Text className="text-ios-red text-center">
               {error}
             </Text>
           </View>
         )}
 
         <Pressable
-          className="bg-primary-600 px-8 py-4 rounded-xl active:bg-primary-700 disabled:opacity-50 flex-row items-center"
+          className="px-8 py-4 rounded-[10px] flex-row items-center active:opacity-80"
+          style={{ backgroundColor: BRAND_COLORS.primary }}
           onPress={handleConnect}
           disabled={isLoading}
         >
-          {isLoading ? (
-            <ActivityIndicator color="white" className="mr-2" />
-          ) : null}
-          <Text className="text-white text-lg font-semibold">
+          {isLoading && (
+            <ActivityIndicator color="white" style={{ marginRight: 8 }} />
+          )}
+          <Text className="text-white text-[17px] font-semibold">
             {isLoading ? "Connecting..." : "Connect to Notion"}
           </Text>
         </Pressable>
 
-        <Text className="mt-8 text-sm text-gray-500 dark:text-gray-500 text-center px-8">
+        <Text className="mt-8 text-[13px] text-label-tertiary dark:text-label-dark-tertiary text-center px-8">
           You'll be redirected to Notion to authorize access to your workspace
         </Text>
       </View>

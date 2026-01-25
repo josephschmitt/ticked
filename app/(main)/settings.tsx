@@ -6,14 +6,17 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { ChevronRight } from "lucide-react-native";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import { clearNotionClient } from "@/services/notion/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
 interface SettingsRowProps {
   label: string;
@@ -21,6 +24,7 @@ interface SettingsRowProps {
   onPress: () => void;
   destructive?: boolean;
   showChevron?: boolean;
+  isLast?: boolean;
 }
 
 function SettingsRow({
@@ -29,32 +33,42 @@ function SettingsRow({
   onPress,
   destructive = false,
   showChevron = true,
+  isLast = false,
 }: SettingsRowProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const chevronColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3;
+
   return (
-    <Pressable
-      onPress={onPress}
-      className="flex-row items-center justify-between py-4 px-4 bg-white dark:bg-gray-800 active:opacity-80"
-    >
-      <Text
-        className={`text-base ${
-          destructive
-            ? "text-red-600 dark:text-red-400"
-            : "text-gray-900 dark:text-white"
-        }`}
+    <>
+      <Pressable
+        onPress={onPress}
+        className="flex-row items-center justify-between py-3 px-4 min-h-[44px] active:opacity-70"
       >
-        {label}
-      </Text>
-      <View className="flex-row items-center">
-        {value && (
-          <Text className="text-gray-500 dark:text-gray-400 mr-2" numberOfLines={1}>
-            {value}
-          </Text>
-        )}
-        {showChevron && !destructive && (
-          <Text className="text-gray-400">›</Text>
-        )}
-      </View>
-    </Pressable>
+        <Text
+          className={`text-[17px] ${
+            destructive
+              ? "text-ios-red"
+              : "text-label-primary dark:text-label-dark-primary"
+          }`}
+        >
+          {label}
+        </Text>
+        <View className="flex-row items-center">
+          {value && (
+            <Text className="text-[17px] text-label-secondary dark:text-label-dark-secondary mr-2" numberOfLines={1}>
+              {value}
+            </Text>
+          )}
+          {showChevron && !destructive && (
+            <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
+          )}
+        </View>
+      </Pressable>
+      {!isLast && (
+        <View className="h-[0.5px] bg-separator dark:bg-separator-dark ml-4" />
+      )}
+    </>
   );
 }
 
@@ -68,19 +82,15 @@ function SettingsSection({
   return (
     <View className="mb-6">
       {title && (
-        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide px-4 mb-2">
+        <Text className="text-[13px] font-normal text-label-secondary dark:text-label-dark-secondary uppercase px-4 mb-1.5">
           {title}
         </Text>
       )}
-      <View className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
         {children}
       </View>
     </View>
   );
-}
-
-function Divider() {
-  return <View className="h-px bg-gray-200 dark:bg-gray-700 ml-4" />;
 }
 
 export default function SettingsScreen() {
@@ -140,10 +150,10 @@ export default function SettingsScreen() {
 
   if (isSigningOut) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={["bottom"]}>
+      <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text className="mt-4 text-gray-600 dark:text-gray-400">
+          <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+          <Text className="mt-4 text-label-secondary dark:text-label-dark-secondary">
             Signing out...
           </Text>
         </View>
@@ -152,8 +162,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={["bottom"]}>
-      <ScrollView className="flex-1 px-4 py-6">
+    <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped" edges={["bottom"]}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 20 }}>
         {/* Account Section */}
         <SettingsSection title="Account">
           <SettingsRow
@@ -161,6 +171,7 @@ export default function SettingsScreen() {
             value={workspaceName || "Unknown"}
             onPress={() => {}}
             showChevron={false}
+            isLast
           />
         </SettingsSection>
 
@@ -171,10 +182,10 @@ export default function SettingsScreen() {
             value={databaseName || "Not selected"}
             onPress={handleChangeDatabase}
           />
-          <Divider />
           <SettingsRow
             label="Field Mapping"
             onPress={handleReconfigureFields}
+            isLast
           />
         </SettingsSection>
 
@@ -185,12 +196,13 @@ export default function SettingsScreen() {
             onPress={handleSignOut}
             destructive
             showChevron={false}
+            isLast
           />
         </SettingsSection>
 
         {/* Version info */}
         <View className="items-center mt-8">
-          <Text className="text-xs text-gray-400 dark:text-gray-500">
+          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
             Ticked v1.0.0
           </Text>
         </View>
