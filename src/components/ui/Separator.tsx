@@ -9,7 +9,7 @@ export function Separator({ inset = true }: SeparatorProps) {
   const isDark = colorScheme === "dark";
 
   return (
-    <View className={`py-0.5 ${inset ? "ml-[78px] mr-6" : ""}`}>
+    <View className={`py-0.5 ${inset ? "ml-[78px] mr-7" : ""}`}>
       <View
         style={{
           height: 1,

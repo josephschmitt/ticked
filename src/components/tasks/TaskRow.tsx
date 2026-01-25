@@ -180,7 +180,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       <Pressable
         onPress={handleContentPress}
         onLongPress={handleLongPress}
-        className="flex-1 flex-row items-start py-3 pr-6 min-h-[44px] active:opacity-70"
+        className="flex-1 flex-row items-start py-3 pr-7 min-h-[44px] active:opacity-70"
         accessibilityHint="Tap to view details, long press to open in Notion"
       >
         <View className="flex-1">
