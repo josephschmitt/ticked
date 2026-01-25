@@ -2,6 +2,8 @@ import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { getTasks, getStatuses, getTasksPaginated } from "@/services/notion/operations/getTasks";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
+import { useTaskCacheStore } from "@/stores/taskCacheStore";
+import { useNetworkState } from "@/hooks/useNetworkState";
 import type { Task, TaskStatus, TaskGroup, DateTaskGroup, StatusGroup } from "@/types/task";
 
 export const TASKS_QUERY_KEY = ["tasks"] as const;
@@ -10,43 +12,75 @@ export const COMPLETED_TASKS_QUERY_KEY = ["completedTasks"] as const;
 
 /**
  * Hook to fetch tasks from the configured database.
+ * Uses cached tasks as placeholder data for instant display.
  */
 export function useTasks() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
 
+  // Cache integration
+  const cachedTasks = useTaskCacheStore((state) => state.tasks);
+  const setTasks = useTaskCacheStore((state) => state.setTasks);
+  const setLastSyncedAt = useTaskCacheStore((state) => state.setLastSyncedAt);
+
+  // Network state
+  const { isOffline } = useNetworkState();
+
   return useQuery({
     queryKey: [...TASKS_QUERY_KEY, databaseId],
-    queryFn: () => {
+    queryFn: async () => {
       if (!databaseId || !fieldMapping) {
         throw new Error("Database not configured");
       }
-      return getTasks(databaseId, fieldMapping);
+      const tasks = await getTasks(databaseId, fieldMapping);
+
+      // Update cache after successful fetch
+      await setTasks(tasks);
+      await setLastSyncedAt(new Date().toISOString());
+
+      return tasks;
     },
-    enabled: isAuthenticated && !!databaseId && !!fieldMapping,
+    enabled: isAuthenticated && !!databaseId && !!fieldMapping && !isOffline,
     staleTime: 1000 * 30, // 30 seconds
+    // Use cached tasks as placeholder for instant display
+    placeholderData: cachedTasks.length > 0 ? cachedTasks : undefined,
   });
 }
 
 /**
  * Hook to fetch status options from the configured database.
+ * Uses cached statuses as placeholder data for instant display.
  */
 export function useStatuses() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
 
+  // Cache integration
+  const cachedStatuses = useTaskCacheStore((state) => state.statuses);
+  const setStatuses = useTaskCacheStore((state) => state.setStatuses);
+
+  // Network state
+  const { isOffline } = useNetworkState();
+
   return useQuery({
     queryKey: [...STATUSES_QUERY_KEY, databaseId, fieldMapping?.status],
-    queryFn: () => {
+    queryFn: async () => {
       if (!databaseId || !fieldMapping?.status) {
         throw new Error("Database not configured");
       }
-      return getStatuses(databaseId, fieldMapping.status);
+      const statuses = await getStatuses(databaseId, fieldMapping.status);
+
+      // Update cache after successful fetch
+      await setStatuses(statuses);
+
+      return statuses;
     },
-    enabled: isAuthenticated && !!databaseId && !!fieldMapping?.status,
+    enabled: isAuthenticated && !!databaseId && !!fieldMapping?.status && !isOffline,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    // Use cached statuses as placeholder for instant display
+    placeholderData: cachedStatuses.length > 0 ? cachedStatuses : undefined,
   });
 }
 
@@ -170,24 +204,37 @@ export function groupTasksByCompletionDate(tasks: Task[]): DateTaskGroup[] {
 
 /**
  * Hook that provides tasks grouped by status.
+ * Falls back to cached data when offline.
  */
 export function useGroupedTasks() {
   const tasksQuery = useTasks();
   const statusesQuery = useStatuses();
+  const { isOffline } = useNetworkState();
+
+  // Get cached data for offline use
+  const cachedTasks = useTaskCacheStore((state) => state.tasks);
+  const cachedStatuses = useTaskCacheStore((state) => state.statuses);
+  const lastSyncedAt = useTaskCacheStore((state) => state.lastSyncedAt);
+
+  // Use query data if available, fall back to cache when offline
+  const tasks = tasksQuery.data ?? (isOffline ? cachedTasks : []);
+  const statuses = statusesQuery.data ?? (isOffline ? cachedStatuses : []);
 
   const groups =
-    tasksQuery.data && statusesQuery.data
-      ? groupTasksByStatus(tasksQuery.data, statusesQuery.data)
+    tasks.length > 0 && statuses.length > 0
+      ? groupTasksByStatus(tasks, statuses)
       : [];
 
   return {
     groups,
-    isLoading: tasksQuery.isLoading || statusesQuery.isLoading,
+    isLoading: !isOffline && (tasksQuery.isLoading || statusesQuery.isLoading),
     error: tasksQuery.error || statusesQuery.error,
     refetch: async () => {
       await Promise.all([tasksQuery.refetch(), statusesQuery.refetch()]);
     },
     isRefetching: tasksQuery.isRefetching || statusesQuery.isRefetching,
+    isOffline,
+    lastSyncedAt,
   };
 }
 

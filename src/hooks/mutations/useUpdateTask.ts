@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConfigStore } from "@/stores/configStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useMutationQueueStore } from "@/stores/mutationQueueStore";
+import { useTaskCacheStore } from "@/stores/taskCacheStore";
+import { useNetworkStore } from "@/stores/networkStore";
 import {
   updateTaskStatus,
   updateTaskCheckbox,
@@ -91,20 +94,35 @@ function updateTaskInCache(
 
 /**
  * Hook to update task status (for status-type properties).
+ * Queues mutation when offline.
  */
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, newStatus }: UpdateStatusParams) => {
       if (!fieldMapping?.status) {
         throw new Error("Status field not configured");
       }
+
+      // Check if offline
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        // Queue the mutation for later sync
+        await addMutation(task.id, "updateStatus", { newStatus }, task);
+        // Update local cache
+        await updateCachedTask(task.id, { status: newStatus });
+        return { task, newStatus, queued: true };
+      }
+
       await updateTaskStatus(task.id, fieldMapping.status, newStatus.name);
-      return { task, newStatus };
+      return { task, newStatus, queued: false };
     },
     onMutate: async ({ task, newStatus }) => {
       // Cancel outgoing refetches
@@ -133,30 +151,49 @@ export function useUpdateTaskStatus() {
       }
       showToast("Failed to update status", "error");
     },
-    onSettled: () => {
-      // Refetch to ensure sync with server
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      // Only refetch if not queued (online mutation)
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task checkbox (for checkbox-type status properties).
+ * Queues mutation when offline.
  */
 export function useUpdateTaskCheckbox() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, checked }: UpdateCheckboxParams) => {
       if (!fieldMapping?.status) {
         throw new Error("Status field not configured");
       }
+
+      const newStatus: TaskStatus = checked
+        ? { id: "checked", name: "Complete", color: "green", group: "complete" }
+        : { id: "unchecked", name: "To Do", color: "default", group: "todo" };
+
+      // Check if offline
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        await addMutation(task.id, "updateCheckbox", { checked }, task);
+        await updateCachedTask(task.id, { status: newStatus });
+        return { task, checked, queued: true };
+      }
+
       await updateTaskCheckbox(task.id, fieldMapping.status, checked);
-      return { task, checked };
+      return { task, checked, queued: false };
     },
     onMutate: async ({ task, checked }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -186,29 +223,43 @@ export function useUpdateTaskCheckbox() {
       }
       showToast("Failed to update status", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task title.
+ * Queues mutation when offline.
  */
 export function useUpdateTaskTitle() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, newTitle }: UpdateTitleParams) => {
       if (!fieldMapping?.taskName) {
         throw new Error("Task name field not configured");
       }
+
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        await addMutation(task.id, "updateTitle", { newTitle }, task);
+        await updateCachedTask(task.id, { title: newTitle });
+        return { task, newTitle, queued: true };
+      }
+
       await updateTaskTitle(task.id, fieldMapping.taskName, newTitle);
-      return { task, newTitle };
+      return { task, newTitle, queued: false };
     },
     onMutate: async ({ task, newTitle }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -233,21 +284,26 @@ export function useUpdateTaskTitle() {
       }
       showToast("Failed to update title", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task date fields.
+ * Queues mutation when offline.
  */
 export function useUpdateTaskDate() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, field, date }: UpdateDateParams) => {
@@ -255,8 +311,22 @@ export function useUpdateTaskDate() {
       if (!propertyId) {
         throw new Error(`${field} field not configured`);
       }
+
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        // Map field to mutation type
+        const mutationType = field === "doDate" ? "updateDoDate" as const
+          : field === "dueDate" ? "updateDueDate" as const
+          : "updateCompletedDate" as const;
+
+        await addMutation(task.id, mutationType, { date }, task);
+        await updateCachedTask(task.id, { [field]: date || undefined });
+        return { task, field, date, queued: true };
+      }
+
       await updateTaskDate(task.id, propertyId, date);
-      return { task, field, date };
+      return { task, field, date, queued: false };
     },
     onMutate: async ({ task, field, date }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -281,21 +351,26 @@ export function useUpdateTaskDate() {
       }
       showToast("Failed to update date", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task select fields (taskType, project).
+ * Queues mutation when offline.
  */
 export function useUpdateTaskSelect() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, field, optionName }: UpdateSelectParams) => {
@@ -303,8 +378,18 @@ export function useUpdateTaskSelect() {
       if (!propertyId) {
         throw new Error(`${field} field not configured`);
       }
+
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        const mutationType = field === "taskType" ? "updateTaskType" as const : "updateProject" as const;
+        await addMutation(task.id, mutationType, { optionName }, task);
+        await updateCachedTask(task.id, { [field]: optionName || undefined });
+        return { task, field, optionName, queued: true };
+      }
+
       await updateTaskSelect(task.id, propertyId, optionName);
-      return { task, field, optionName };
+      return { task, field, optionName, queued: false };
     },
     onMutate: async ({ task, field, optionName }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -329,30 +414,45 @@ export function useUpdateTaskSelect() {
       }
       showToast("Failed to update field", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task relation fields (taskType, project).
+ * Queues mutation when offline.
  */
 export function useUpdateTaskRelation() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
-    mutationFn: async ({ task, field, pageIds }: UpdateRelationParams) => {
+    mutationFn: async ({ task, field, pageIds, displayName }: UpdateRelationParams) => {
       const propertyId = fieldMapping?.[field];
       if (!propertyId) {
         throw new Error(`${field} field not configured`);
       }
+
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        const mutationType = field === "taskType" ? "updateTaskType" as const : "updateProject" as const;
+        await addMutation(task.id, mutationType, { optionName: displayName, isRelation: true, pageIds }, task);
+        await updateCachedTask(task.id, { [field]: displayName || undefined });
+        return { task, field, pageIds, queued: true };
+      }
+
       await updateTaskRelation(task.id, propertyId, pageIds);
-      return { task, field, pageIds };
+      return { task, field, pageIds, queued: false };
     },
     onMutate: async ({ task, field, displayName }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -377,21 +477,26 @@ export function useUpdateTaskRelation() {
       }
       showToast("Failed to update field", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }
 
 /**
  * Hook to update task URL.
+ * Queues mutation when offline.
  */
 export function useUpdateTaskUrl() {
   const queryClient = useQueryClient();
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showToast = useToastStore((state) => state.showToast);
+  const addMutation = useMutationQueueStore((state) => state.addMutation);
+  const updateCachedTask = useTaskCacheStore((state) => state.updateTask);
 
   return useMutation({
     mutationFn: async ({ task, url }: UpdateUrlParams) => {
@@ -399,8 +504,17 @@ export function useUpdateTaskUrl() {
       if (!propertyId) {
         throw new Error("URL field not configured");
       }
+
+      const isOffline = !useNetworkStore.getState().isConnected;
+
+      if (isOffline) {
+        await addMutation(task.id, "updateUrl", { url }, task);
+        await updateCachedTask(task.id, { url: url || undefined });
+        return { task, url, queued: true };
+      }
+
       await updateTaskUrl(task.id, propertyId, url);
-      return { task, url };
+      return { task, url, queued: false };
     },
     onMutate: async ({ task, url }) => {
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
@@ -425,9 +539,11 @@ export function useUpdateTaskUrl() {
       }
       showToast("Failed to update URL", "error");
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+    onSettled: (_data) => {
+      if (!_data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }

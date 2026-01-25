@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ASYNC_STORAGE_KEYS, type AsyncStorageKey } from "@/constants/storage";
 import type { FieldMapping } from "@/types/fieldMapping";
+import type { Task, TaskStatus } from "@/types/task";
+import type { PendingMutation, SyncConflict } from "@/types/mutation";
 
 /**
  * Async storage wrapper for non-sensitive preferences and configuration.
@@ -177,5 +179,136 @@ export async function clearAllConfig(): Promise<void> {
     deleteAsyncItem(ASYNC_STORAGE_KEYS.CUSTOM_LIST_NAME),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.FIELD_MAPPING),
     deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_STATUS_ID),
+  ]);
+}
+
+// ==========================================
+// Task Cache Storage Functions
+// ==========================================
+
+/**
+ * Store cached tasks.
+ */
+export async function storeCachedTasks(tasks: Task[]): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.CACHED_TASKS, JSON.stringify(tasks));
+}
+
+/**
+ * Get cached tasks.
+ */
+export async function getCachedTasks(): Promise<Task[]> {
+  const json = await getAsyncItem(ASYNC_STORAGE_KEYS.CACHED_TASKS);
+  if (!json) return [];
+
+  try {
+    return JSON.parse(json) as Task[];
+  } catch {
+    console.error("Failed to parse cached tasks JSON");
+    return [];
+  }
+}
+
+/**
+ * Store cached statuses.
+ */
+export async function storeCachedStatuses(statuses: TaskStatus[]): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.CACHED_STATUSES, JSON.stringify(statuses));
+}
+
+/**
+ * Get cached statuses.
+ */
+export async function getCachedStatuses(): Promise<TaskStatus[]> {
+  const json = await getAsyncItem(ASYNC_STORAGE_KEYS.CACHED_STATUSES);
+  if (!json) return [];
+
+  try {
+    return JSON.parse(json) as TaskStatus[];
+  } catch {
+    console.error("Failed to parse cached statuses JSON");
+    return [];
+  }
+}
+
+/**
+ * Store last synced timestamp.
+ */
+export async function storeLastSyncedAt(timestamp: string): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.LAST_SYNCED_AT, timestamp);
+}
+
+/**
+ * Get last synced timestamp.
+ */
+export async function getLastSyncedAt(): Promise<string | null> {
+  return getAsyncItem(ASYNC_STORAGE_KEYS.LAST_SYNCED_AT);
+}
+
+/**
+ * Clear task cache (used when switching databases or signing out).
+ */
+export async function clearTaskCache(): Promise<void> {
+  await Promise.all([
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.CACHED_TASKS),
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.CACHED_STATUSES),
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.LAST_SYNCED_AT),
+  ]);
+}
+
+// ==========================================
+// Mutation Queue Storage Functions
+// ==========================================
+
+/**
+ * Store mutation queue.
+ */
+export async function storeMutationQueue(queue: PendingMutation[]): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.MUTATION_QUEUE, JSON.stringify(queue));
+}
+
+/**
+ * Get mutation queue.
+ */
+export async function getMutationQueue(): Promise<PendingMutation[]> {
+  const json = await getAsyncItem(ASYNC_STORAGE_KEYS.MUTATION_QUEUE);
+  if (!json) return [];
+
+  try {
+    return JSON.parse(json) as PendingMutation[];
+  } catch {
+    console.error("Failed to parse mutation queue JSON");
+    return [];
+  }
+}
+
+/**
+ * Store sync conflicts.
+ */
+export async function storeSyncConflicts(conflicts: SyncConflict[]): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.SYNC_CONFLICTS, JSON.stringify(conflicts));
+}
+
+/**
+ * Get sync conflicts.
+ */
+export async function getSyncConflicts(): Promise<SyncConflict[]> {
+  const json = await getAsyncItem(ASYNC_STORAGE_KEYS.SYNC_CONFLICTS);
+  if (!json) return [];
+
+  try {
+    return JSON.parse(json) as SyncConflict[];
+  } catch {
+    console.error("Failed to parse sync conflicts JSON");
+    return [];
+  }
+}
+
+/**
+ * Clear mutation queue and conflicts.
+ */
+export async function clearMutationData(): Promise<void> {
+  await Promise.all([
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.MUTATION_QUEUE),
+    deleteAsyncItem(ASYNC_STORAGE_KEYS.SYNC_CONFLICTS),
   ]);
 }

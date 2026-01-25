@@ -2,6 +2,8 @@ import { Stack } from "expo-router";
 import { View, useColorScheme, Platform } from "react-native";
 import { BRAND_COLORS, IOS_BACKGROUNDS } from "@/constants/colors";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
+import { ConflictBanner } from "@/components/sync/ConflictBanner";
 
 // iOS 26+ handles header blur automatically; older versions need explicit blur
 const getIOSVersion = (): number => {
@@ -24,7 +26,13 @@ export default function MainLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: contentBg, alignItems: "center" }}>
+      {/* Offline indicator banner at top */}
+      <View style={{ width: shouldConstrain ? maxWidth : "100%" }}>
+        <OfflineIndicator variant="banner" />
+      </View>
       <View style={{ flex: 1, width: shouldConstrain ? maxWidth : "100%" }}>
+        {/* Conflict banner */}
+        <ConflictBanner />
         <Stack
           screenOptions={{
             headerShown: true,
@@ -67,6 +75,13 @@ export default function MainLayout() {
               sheetGrabberVisible: true,
               sheetInitialDetentIndex: 0,
               headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="conflicts"
+            options={{
+              title: "Sync Conflicts",
+              presentation: "modal",
             }}
           />
         </Stack>

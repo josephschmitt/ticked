@@ -8,6 +8,10 @@ import { useColorScheme } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
+import { useTaskCacheStore } from "@/stores/taskCacheStore";
+import { useMutationQueueStore } from "@/stores/mutationQueueStore";
+import { useNetworkStateInit } from "@/hooks/useNetworkState";
+import { useSyncOnReconnect } from "@/hooks/useSyncOnReconnect";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { IOS_BACKGROUNDS } from "@/constants/colors";
@@ -26,11 +30,24 @@ export default function RootLayout() {
   const isDark = colorScheme === "dark";
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const hydrateConfig = useConfigStore((state) => state.hydrate);
+  const hydrateTaskCache = useTaskCacheStore((state) => state.hydrate);
+  const hydrateMutationQueue = useMutationQueueStore((state) => state.hydrate);
+
+  // Initialize network state monitoring
+  useNetworkStateInit();
+
+  // Auto-sync on reconnect
+  useSyncOnReconnect();
 
   // Hydrate stores on app start
   useEffect(() => {
-    Promise.all([hydrateAuth(), hydrateConfig()]);
-  }, [hydrateAuth, hydrateConfig]);
+    Promise.all([
+      hydrateAuth(),
+      hydrateConfig(),
+      hydrateTaskCache(),
+      hydrateMutationQueue(),
+    ]);
+  }, [hydrateAuth, hydrateConfig, hydrateTaskCache, hydrateMutationQueue]);
 
   // Set system UI background color based on theme (iOS grouped background)
   useEffect(() => {

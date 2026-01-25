@@ -17,6 +17,12 @@ export const ASYNC_STORAGE_KEYS = {
   SHOW_TASK_TYPE_INLINE: "show_task_type_inline",
   APPROACHING_DAYS_THRESHOLD: "approaching_days_threshold",
   DEFAULT_STATUS_ID: "default_status_id",
+  // Offline cache keys
+  CACHED_TASKS: "cached_tasks",
+  CACHED_STATUSES: "cached_statuses",
+  LAST_SYNCED_AT: "last_synced_at",
+  MUTATION_QUEUE: "mutation_queue",
+  SYNC_CONFLICTS: "sync_conflicts",
 } as const;
 
 export type SecureStorageKey =
