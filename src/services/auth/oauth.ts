@@ -42,7 +42,7 @@ function getClientId(): string {
  */
 export function useNotionAuthRequest() {
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "notiontodos",
+    scheme: "ticked",
     path: "oauth/callback",
   });
 
@@ -122,7 +122,7 @@ export async function exchangeCodeForTokens(
 export function buildAuthorizationUrl(state?: string): string {
   const clientId = getClientId();
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "notiontodos",
+    scheme: "ticked",
     path: "oauth/callback",
   });
 

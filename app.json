@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Notion Todos",
-    "slug": "notion-todos-native",
+    "name": "Ticked",
+    "slug": "ticked",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "notiontodos",
+    "scheme": "ticked",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.notiontodos.app"
+      "bundleIdentifier": "com.ticked.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.notiontodos.app"
+      "package": "com.ticked.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",

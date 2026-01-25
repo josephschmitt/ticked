@@ -18,7 +18,7 @@ export default function LandingScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "notiontodos",
+    scheme: "ticked",
     path: "oauth/callback",
   });
 
@@ -83,7 +83,7 @@ export default function LandingScreen() {
         </View>
 
         <Text className="text-4xl font-bold text-gray-900 dark:text-white mb-4 text-center">
-          Notion Todos
+          Ticked
         </Text>
 
         <Text className="text-lg text-gray-600 dark:text-gray-400 text-center mb-12 px-4">

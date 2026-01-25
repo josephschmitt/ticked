@@ -191,7 +191,7 @@ export default function SettingsScreen() {
         {/* Version info */}
         <View className="items-center mt-8">
           <Text className="text-xs text-gray-400 dark:text-gray-500">
-            Notion Todos v1.0.0
+            Ticked v1.0.0
           </Text>
         </View>
       </ScrollView>

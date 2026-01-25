@@ -4,7 +4,7 @@ export * from "./colors";
 // OAuth configuration
 export const OAUTH_CONFIG = {
   authorizationEndpoint: "https://api.notion.com/v1/oauth/authorize",
-  redirectUri: "notiontodos://oauth/callback",
+  redirectUri: "ticked://oauth/callback",
   scopes: ["read_content", "read_user"],
 } as const;
 

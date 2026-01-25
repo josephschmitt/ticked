@@ -19,7 +19,7 @@ export default function CallbackScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "notiontodos",
+    scheme: "ticked",
     path: "oauth/callback",
   });
 
