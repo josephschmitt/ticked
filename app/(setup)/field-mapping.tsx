@@ -152,6 +152,11 @@ export default function FieldMappingScreen() {
           <Text className="text-red-600 dark:text-red-400 text-lg text-center mb-4">
             Failed to load database schema
           </Text>
+          {error && (
+            <Text className="text-gray-500 dark:text-gray-400 text-center text-sm mb-4">
+              {error instanceof Error ? error.message : "Unknown error"}
+            </Text>
+          )}
           <Pressable
             onPress={() => router.back()}
             className="bg-primary-600 px-6 py-3 rounded-xl"

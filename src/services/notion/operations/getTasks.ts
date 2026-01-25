@@ -28,6 +28,11 @@ interface QueryResponse {
   next_cursor: string | null;
 }
 
+interface PageTitleResponse {
+  id: string;
+  properties: Record<string, { type: string; title?: Array<{ plain_text: string }> }>;
+}
+
 /**
  * Infer status group from status name.
  */
@@ -85,12 +90,27 @@ function extractPropertyValue(
 }
 
 /**
+ * Get a relation value, resolving the ID to a title if available.
+ */
+function getRelationValue(
+  property: PropertyValue | undefined,
+  relationTitles: Map<string, string>
+): string | null {
+  if (!property || property.type !== "relation" || !property.relation?.[0]) {
+    return null;
+  }
+  const relationId = property.relation[0].id;
+  return relationTitles.get(relationId) || null;
+}
+
+/**
  * Convert a Notion page to a Task using field mapping.
  */
 function pageToTask(
   page: PageResult,
   fieldMapping: FieldMapping,
-  propertyMap: Map<string, PropertyValue>
+  propertyMap: Map<string, PropertyValue>,
+  relationTitles: Map<string, string>
 ): Task | null {
   // Get title (required)
   const titleProp = propertyMap.get(fieldMapping.taskName);
@@ -121,19 +141,19 @@ function pageToTask(
     return null;
   }
 
-  // Get optional fields
-  const taskType = fieldMapping.taskType
-    ? (extractPropertyValue(
-        propertyMap.get(fieldMapping.taskType),
-        propertyMap.get(fieldMapping.taskType)?.type === "relation" ? "relation" : "select"
-      ) as string | null)
+  // Get optional fields - handle both select and relation types
+  const taskTypeProp = fieldMapping.taskType ? propertyMap.get(fieldMapping.taskType) : undefined;
+  const taskType = taskTypeProp
+    ? taskTypeProp.type === "relation"
+      ? getRelationValue(taskTypeProp, relationTitles)
+      : (extractPropertyValue(taskTypeProp, "select") as string | null)
     : undefined;
 
-  const project = fieldMapping.project
-    ? (extractPropertyValue(
-        propertyMap.get(fieldMapping.project),
-        propertyMap.get(fieldMapping.project)?.type === "relation" ? "relation" : "select"
-      ) as string | null)
+  const projectProp = fieldMapping.project ? propertyMap.get(fieldMapping.project) : undefined;
+  const project = projectProp
+    ? projectProp.type === "relation"
+      ? getRelationValue(projectProp, relationTitles)
+      : (extractPropertyValue(projectProp, "select") as string | null)
     : undefined;
 
   const doDate = fieldMapping.doDate
@@ -163,6 +183,53 @@ function pageToTask(
 }
 
 /**
+ * Fetch the title of a page by ID.
+ */
+async function getPageTitle(pageId: string): Promise<string | null> {
+  const client = getNotionClient();
+
+  try {
+    const page = (await client.pages.retrieve({
+      page_id: pageId,
+    })) as unknown as PageTitleResponse;
+
+    // Find the title property (it's always type "title")
+    for (const prop of Object.values(page.properties)) {
+      if (prop.type === "title" && prop.title) {
+        return prop.title.map((t) => t.plain_text).join("") || null;
+      }
+    }
+    return null;
+  } catch {
+    console.warn(`Failed to fetch page title for ${pageId}`);
+    return null;
+  }
+}
+
+/**
+ * Batch fetch page titles for multiple IDs.
+ */
+async function getPageTitles(pageIds: string[]): Promise<Map<string, string>> {
+  const titles = new Map<string, string>();
+
+  // Fetch in parallel with a reasonable batch size
+  const results = await Promise.all(
+    pageIds.map(async (id) => {
+      const title = await getPageTitle(id);
+      return { id, title };
+    })
+  );
+
+  for (const { id, title } of results) {
+    if (title) {
+      titles.set(id, title);
+    }
+  }
+
+  return titles;
+}
+
+/**
  * Fetch tasks from a Notion data source using field mapping.
  * Note: As of Notion API 2025-09-03, databases are now called "data sources".
  */
@@ -188,6 +255,26 @@ export async function getTasks(
     ],
   })) as QueryResponse;
 
+  // First pass: collect all relation IDs we need to resolve
+  const relationIds = new Set<string>();
+  const relationPropertyIds = [fieldMapping.taskType, fieldMapping.project].filter(Boolean) as string[];
+
+  for (const page of response.results) {
+    for (const prop of Object.values(page.properties)) {
+      if (prop.type === "relation" && prop.relation && relationPropertyIds.includes(prop.id || "")) {
+        for (const rel of prop.relation) {
+          relationIds.add(rel.id);
+        }
+      }
+    }
+  }
+
+  // Fetch titles for all related pages
+  const relationTitles = relationIds.size > 0
+    ? await getPageTitles(Array.from(relationIds))
+    : new Map<string, string>();
+
+  // Second pass: build tasks with resolved relation titles
   const tasks: Task[] = [];
 
   for (const page of response.results) {
@@ -200,7 +287,7 @@ export async function getTasks(
       }
     }
 
-    const task = pageToTask(page, fieldMapping, propertyMap);
+    const task = pageToTask(page, fieldMapping, propertyMap, relationTitles);
     if (task) {
       tasks.push(task);
     }
