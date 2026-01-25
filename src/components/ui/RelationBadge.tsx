@@ -1,4 +1,5 @@
-import { View, Text, Image, useColorScheme } from "react-native";
+import { View, Text, useColorScheme } from "react-native";
+import { Image } from "expo-image";
 import type { LucideIcon } from "lucide-react-native";
 import type { DatabaseIcon } from "@/types/database";
 import { IOS_GRAYS } from "@/constants/colors";
@@ -27,7 +28,6 @@ export function RelationBadge({
 
   const iconSize = size === "small" ? 14 : 16;
   const emojiSize = size === "small" ? "text-[12px]" : "text-[14px]";
-  const imageSize = size === "small" ? "w-3.5 h-3.5" : "w-4 h-4";
   const textSize = size === "small" ? "text-[15px]" : "text-[13px]";
   const iconColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
@@ -45,16 +45,15 @@ export function RelationBadge({
       (icon.external?.url || icon.file?.url)
     ) {
       const imageUrl = icon.external?.url || icon.file?.url;
-
-      // React Native Image doesn't support SVG URLs, fall back to default icon
-      if (imageUrl?.toLowerCase().endsWith(".svg")) {
-        return <FallbackIcon size={iconSize} color={iconColor} strokeWidth={2} />;
-      }
+      const imageDimension = size === "small" ? 14 : 16;
+      const isSvg = imageUrl?.toLowerCase().endsWith(".svg");
 
       return (
         <Image
           source={{ uri: imageUrl }}
-          className={`${imageSize} rounded-sm`}
+          style={{ width: imageDimension, height: imageDimension, borderRadius: 2 }}
+          contentFit="contain"
+          tintColor={isSvg ? iconColor : undefined}
         />
       );
     }
