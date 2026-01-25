@@ -30,7 +30,7 @@ export function DateTaskGroup({ group, defaultExpanded = true }: DateTaskGroupPr
       {/* Section header */}
       <Pressable
         onPress={toggleExpanded}
-        className="flex-row items-center justify-between px-4 pb-2"
+        className="flex-row items-center justify-between px-6 pb-2"
         accessibilityRole="button"
         accessibilityLabel={`${group.label}, ${taskCount} tasks, ${isExpanded ? "expanded" : "collapsed"}`}
         accessibilityHint="Double tap to toggle section"
@@ -49,9 +49,9 @@ export function DateTaskGroup({ group, defaultExpanded = true }: DateTaskGroupPr
         )}
       </Pressable>
 
-      {/* Grouped container */}
+      {/* Grouped container - edge to edge with larger radius */}
       {isExpanded && (
-        <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
+        <View className="mx-0 py-3 rounded-3xl bg-background-elevated dark:bg-background-dark-elevated">
           {group.tasks.map((task, index) => (
             <View key={task.id}>
               <TaskRow task={task} />

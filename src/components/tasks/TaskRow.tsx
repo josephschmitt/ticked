@@ -89,7 +89,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       {/* Checkbox - separate touch target, aligned to first line of title */}
       <Pressable
         onPress={handleCheckboxPress}
-        className="pl-4 pt-3 pb-3 pr-1 min-h-[44px] items-center"
+        className="pl-6 pt-3 pb-3 pr-1 min-h-[44px] items-center"
         accessibilityLabel={isComplete ? "Mark incomplete" : "Mark complete"}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isComplete }}
@@ -107,7 +107,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       <Pressable
         onPress={handleContentPress}
         onLongPress={handleLongPress}
-        className="flex-1 flex-row items-start py-3 pr-4 min-h-[44px] active:opacity-70"
+        className="flex-1 flex-row items-start py-3 pr-6 min-h-[44px] active:opacity-70"
         accessibilityHint="Tap to view details, long press to open in Notion"
       >
         <View className="flex-1 ml-2">

@@ -97,10 +97,10 @@ export function TaskList({
       ))}
 
       {onDonePress && (
-        <View className="mx-4 rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated overflow-hidden">
+        <View className="mx-0 py-3 rounded-3xl bg-background-elevated dark:bg-background-dark-elevated">
           <Pressable
             onPress={onDonePress}
-            className="flex-row items-center px-4 py-3 min-h-[44px] active:opacity-70"
+            className="flex-row items-center pl-6 pr-6 py-3 min-h-[44px] active:opacity-70"
           >
             <CheckCircle2 size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
             <Text className="flex-1 ml-3 text-[17px] text-label-primary dark:text-label-dark-primary">
