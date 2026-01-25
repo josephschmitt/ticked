@@ -51,7 +51,7 @@ export function DateTaskGroup({ group, defaultExpanded = true }: DateTaskGroupPr
 
       {/* Grouped container - edge to edge with larger radius */}
       {isExpanded && (
-        <View className="mx-0 py-3 rounded-3xl bg-background-elevated dark:bg-background-dark-elevated">
+        <View className="mx-0 py-3 rounded-[32px] bg-background-elevated dark:bg-background-dark-elevated">
           {group.tasks.map((task, index) => (
             <View key={task.id}>
               <TaskRow task={task} />

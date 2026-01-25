@@ -82,7 +82,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
 
   return (
     <View
-      className="flex-row items-start bg-background-elevated dark:bg-background-dark-elevated"
+      className="flex-row items-start"
       accessible={true}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"

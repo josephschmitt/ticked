@@ -97,7 +97,7 @@ export function TaskList({
       ))}
 
       {onDonePress && (
-        <View className="mx-0 py-3 rounded-3xl bg-background-elevated dark:bg-background-dark-elevated">
+        <View className="mx-0 py-3 rounded-[32px] bg-background-elevated dark:bg-background-dark-elevated">
           <Pressable
             onPress={onDonePress}
             className="flex-row items-center pl-6 pr-6 py-3 min-h-[44px] active:opacity-70"
