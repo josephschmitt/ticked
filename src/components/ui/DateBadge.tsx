@@ -35,7 +35,7 @@ export function formatDisplayDate(dateStr: string): string {
 /**
  * Determine urgency level based on how close/past the date is.
  * @param dateStr - The date string to check
- * @param approachingThreshold - Number of days to consider "approaching" (default: 2)
+ * @param approachingThreshold - Number of days to consider "approaching" (default: 2, -1 to disable)
  */
 export function getDateUrgency(dateStr: string, approachingThreshold: number = 2): Urgency {
   const date = new Date(dateStr);
@@ -47,7 +47,7 @@ export function getDateUrgency(dateStr: string, approachingThreshold: number = 2
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return "overdue";
-  if (diffDays <= approachingThreshold) return "approaching";
+  if (approachingThreshold >= 0 && diffDays <= approachingThreshold) return "approaching";
   return "normal";
 }
 

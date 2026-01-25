@@ -164,6 +164,7 @@ export default function SettingsScreen() {
   }, [setShowTaskTypeInline]);
 
   const approachingDaysOptions = [
+    { label: "Never", value: -1 },
     { label: "Same day only", value: 0 },
     { label: "1 day", value: 1 },
     { label: "2 days", value: 2 },
