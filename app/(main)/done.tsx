@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import { AlertCircle, Inbox } from "lucide-react-native";
 import { useCompletedTasks } from "@/hooks/queries/useTasks";
 import { DateTaskGroup } from "@/components/tasks/DateTaskGroup";
+import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import type { DateTaskGroup as DateTaskGroupType } from "@/types/task";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
@@ -35,15 +36,19 @@ export default function DoneScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const renderItem = useCallback(({ item }: { item: DateTaskGroupType }) => (
-    <DateTaskGroup group={item} defaultExpanded={true} />
+    <ResponsiveContainer>
+      <DateTaskGroup group={item} defaultExpanded={true} />
+    </ResponsiveContainer>
   ), []);
 
   const renderFooter = useCallback(() => {
     if (!isFetchingNextPage) return null;
     return (
-      <View className="py-4 items-center">
-        <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
-      </View>
+      <ResponsiveContainer>
+        <View className="py-4 items-center">
+          <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
+        </View>
+      </ResponsiveContainer>
     );
   }, [isFetchingNextPage]);
 
