@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator, StyleSheet } from "react-native";
 import { Circle, CheckCircle2, Link as LinkIcon, Calendar, FolderOpen, Tag } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import type { Task } from "@/types/task";
@@ -81,7 +81,7 @@ export function TaskDetailContent({
       </View>
 
       {/* Metadata row */}
-      <View className="flex-row flex-wrap items-center mb-4 gap-2">
+      <View className="flex-row flex-wrap items-center mb-4 gap-2 ml-10">
         {/* Status badge */}
         <View
           className="px-3 py-1 rounded-full"
@@ -139,6 +139,9 @@ export function TaskDetailContent({
           </Pressable>
         )}
       </View>
+
+      {/* Divider */}
+      <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
 
       {/* Content area */}
       {isFullScreen ? (
