@@ -354,7 +354,7 @@ export function TaskDetailContent({
   const currentProjectRelationId = projectRelationOptions?.find((o) => o.title === task.project)?.id || null;
 
   return (
-    <View className="flex-1 px-6 pt-8">
+    <View className="px-6 pt-8">
       {/* Title with checkbox */}
       <View className="flex-row items-start mb-4">
         <Pressable
@@ -510,10 +510,16 @@ export function TaskDetailContent({
       </View>
 
       {/* Divider */}
-      <View className="my-6 bg-separator dark:bg-separator-dark" style={{ height: StyleSheet.hairlineWidth }} />
+      <View
+        className="mt-4 mb-6"
+        style={{
+          height: 1,
+          backgroundColor: isDark ? "rgba(84,84,88,0.25)" : "rgba(60,60,67,0.12)",
+        }}
+      />
 
       {/* Content area - tap to open in Notion */}
-      <Pressable onPress={handleContentPress} className="flex-1 pb-8 active:opacity-70">
+      <Pressable onPress={handleContentPress} className="pb-8 active:opacity-70">
         {isLoadingContent ? (
           <View className="py-8 items-center">
             <ActivityIndicator size="small" color={BRAND_COLORS.primary} />

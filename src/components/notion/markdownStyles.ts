@@ -17,6 +17,7 @@ export function getMarkdownStyles(isDark: boolean): MarkdownStyleSheet {
       color: textColor,
       fontSize: 17,
       lineHeight: 24,
+      backgroundColor: "transparent",
     },
     text: {
       color: textColor,
