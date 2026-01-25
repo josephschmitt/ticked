@@ -75,6 +75,31 @@ export function groupTasksByStatus(
 }
 
 /**
+ * Group completed tasks by status for the Done page.
+ */
+export function groupCompletedTasks(
+  tasks: Task[],
+  statuses: TaskStatus[]
+): TaskGroup[] {
+  const groups: TaskGroup[] = [];
+
+  for (const status of statuses) {
+    // Only include complete statuses
+    if (status.group !== "complete") continue;
+
+    const tasksForStatus = tasks.filter((t) => t.status.id === status.id);
+    if (tasksForStatus.length > 0) {
+      groups.push({
+        status,
+        tasks: tasksForStatus,
+      });
+    }
+  }
+
+  return groups;
+}
+
+/**
  * Hook that provides tasks grouped by status.
  */
 export function useGroupedTasks() {
@@ -88,6 +113,32 @@ export function useGroupedTasks() {
 
   return {
     groups,
+    isLoading: tasksQuery.isLoading || statusesQuery.isLoading,
+    error: tasksQuery.error || statusesQuery.error,
+    refetch: async () => {
+      await Promise.all([tasksQuery.refetch(), statusesQuery.refetch()]);
+    },
+    isRefetching: tasksQuery.isRefetching || statusesQuery.isRefetching,
+  };
+}
+
+/**
+ * Hook that provides completed tasks grouped by status.
+ */
+export function useCompletedTasks() {
+  const tasksQuery = useTasks();
+  const statusesQuery = useStatuses();
+
+  const groups =
+    tasksQuery.data && statusesQuery.data
+      ? groupCompletedTasks(tasksQuery.data, statusesQuery.data)
+      : [];
+
+  const totalCount = groups.reduce((acc, g) => acc + g.tasks.length, 0);
+
+  return {
+    groups,
+    totalCount,
     isLoading: tasksQuery.isLoading || statusesQuery.isLoading,
     error: tasksQuery.error || statusesQuery.error,
     refetch: async () => {

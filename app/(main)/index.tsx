@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import { View, Pressable, Text } from "react-native";
+import { Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useGroupedTasks } from "@/hooks/queries/useTasks";
+import { useGroupedTasks, useCompletedTasks } from "@/hooks/queries/useTasks";
 import { useConfigStore } from "@/stores/configStore";
 import { TaskList } from "@/components/tasks/TaskList";
 
@@ -11,6 +11,7 @@ export default function TaskListScreen() {
   const router = useRouter();
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const { groups, isLoading, error, refetch, isRefetching } = useGroupedTasks();
+  const { totalCount: doneCount } = useCompletedTasks();
 
   const handleRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -20,6 +21,11 @@ export default function TaskListScreen() {
   const handleOpenSettings = useCallback(() => {
     Haptics.selectionAsync();
     router.push("/(main)/settings");
+  }, [router]);
+
+  const handleOpenDone = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push("/(main)/done");
   }, [router]);
 
   return (
@@ -45,6 +51,8 @@ export default function TaskListScreen() {
           isRefreshing={isRefetching}
           onRefresh={handleRefresh}
           error={error instanceof Error ? error : null}
+          doneCount={doneCount}
+          onDonePress={handleOpenDone}
         />
       </SafeAreaView>
     </>

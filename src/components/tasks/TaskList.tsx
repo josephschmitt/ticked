@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable } from "react-native";
 import type { TaskGroup as TaskGroupType } from "@/types/task";
 import { TaskGroup } from "./TaskGroup";
 
@@ -8,6 +8,8 @@ interface TaskListProps {
   isRefreshing: boolean;
   onRefresh: () => void;
   error?: Error | null;
+  doneCount?: number;
+  onDonePress?: () => void;
 }
 
 export function TaskList({
@@ -16,6 +18,8 @@ export function TaskList({
   isRefreshing,
   onRefresh,
   error,
+  doneCount,
+  onDonePress,
 }: TaskListProps) {
   // Loading state
   if (isLoading && groups.length === 0) {
@@ -81,6 +85,28 @@ export function TaskList({
           defaultExpanded={group.status.group !== "complete"}
         />
       ))}
+
+      {onDonePress && (
+        <Pressable
+          onPress={onDonePress}
+          className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl flex-row items-center justify-between active:opacity-70"
+        >
+          <View className="flex-row items-center">
+            <Text className="text-lg mr-2">✓</Text>
+            <Text className="text-base font-medium text-gray-900 dark:text-white">
+              Done
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            {doneCount !== undefined && doneCount > 0 && (
+              <Text className="text-sm text-gray-500 dark:text-gray-400 mr-2">
+                {doneCount}
+              </Text>
+            )}
+            <Text className="text-gray-400 dark:text-gray-500">›</Text>
+          </View>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
