@@ -131,7 +131,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
 
           {/* Meta row */}
           {hasMetadata && (
-            <View className="flex-row items-center mt-0.5" accessible={false}>
+            <View className={`flex-row items-center mt-0.5 ${isComplete ? 'opacity-60' : ''}`} accessible={false}>
               {task.project && (
                 <RelationBadge
                   name={task.project}
