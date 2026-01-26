@@ -24,6 +24,8 @@ interface TaskCacheState {
   setTasks: (tasks: Task[]) => Promise<void>;
   /** Update cached statuses */
   setStatuses: (statuses: TaskStatus[]) => Promise<void>;
+  /** Add a new task to the cache (for optimistic create) */
+  addTask: (task: Task) => Promise<void>;
   /** Update a single task in the cache (for optimistic updates) */
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   /** Update last synced timestamp */
@@ -52,6 +54,16 @@ export const useTaskCacheStore = create<TaskCacheState>((set, get) => ({
     await storeCachedStatuses(statuses);
     // Update state
     set({ statuses });
+  },
+
+  addTask: async (task) => {
+    const { tasks } = get();
+    // Add to beginning of array so it appears first
+    const updatedTasks = [task, ...tasks];
+    // Persist to storage
+    await storeCachedTasks(updatedTasks);
+    // Update state
+    set({ tasks: updatedTasks });
   },
 
   updateTask: async (taskId, updates) => {

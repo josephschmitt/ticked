@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -86,6 +86,9 @@ export function TaskDetailContent({
   const updateRelationMutation = useUpdateTaskRelation();
   const updateUrlMutation = useUpdateTaskUrl();
 
+  // Ref for title input
+  const titleInputRef = useRef<TextInput>(null);
+
   // Local state for editing
   const [localTitle, setLocalTitle] = useState(task.title);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
@@ -93,6 +96,16 @@ export function TaskDetailContent({
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showUrlEditor, setShowUrlEditor] = useState(false);
   const [editedUrl, setEditedUrl] = useState(task.url || "");
+
+  // Auto-focus title if empty (new task)
+  useEffect(() => {
+    if (!task.title) {
+      const timeout = setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [task.title]);
 
   // Computed values
   const isComplete = task.status.group === "complete";
@@ -371,10 +384,13 @@ export function TaskDetailContent({
           )}
         </Pressable>
         <TextInput
+          ref={titleInputRef}
           value={localTitle}
           onChangeText={setLocalTitle}
           onSubmitEditing={handleTitleSubmit}
           onBlur={handleTitleSubmit}
+          placeholder="Task name"
+          placeholderTextColor={secondaryColor}
           returnKeyType="done"
           blurOnSubmit={true}
           multiline

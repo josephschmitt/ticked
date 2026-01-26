@@ -78,6 +78,16 @@ export default function MainLayout() {
             }}
           />
           <Stack.Screen
+            name="task/new"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.4, 1.0],
+              sheetGrabberVisible: true,
+              sheetInitialDetentIndex: 0,
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="conflicts"
             options={{
               title: "Sync Conflicts",

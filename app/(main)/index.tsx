@@ -33,6 +33,11 @@ export default function TaskListScreen() {
     router.push("/(main)/done");
   }, [router]);
 
+  const handleCreatePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/(main)/task/new");
+  }, [router]);
+
   return (
     <>
       <Stack.Screen
@@ -57,6 +62,7 @@ export default function TaskListScreen() {
         error={error instanceof Error ? error : null}
         doneCount={doneCount}
         onDonePress={handleOpenDone}
+        onCreatePress={handleCreatePress}
       />
     </>
   );

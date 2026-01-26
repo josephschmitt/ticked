@@ -4,6 +4,7 @@ import type { Task, TaskStatus } from "./task";
  * Types of mutations that can be queued for offline sync.
  */
 export type MutationType =
+  | "createTask"
   | "updateStatus"
   | "updateCheckbox"
   | "updateTitle"
@@ -18,6 +19,7 @@ export type MutationType =
  * Payload types for each mutation type.
  */
 export interface MutationPayloads {
+  createTask: { title: string; statusId: string; statusName: string };
   updateStatus: { newStatus: TaskStatus };
   updateCheckbox: { checked: boolean };
   updateTitle: { newTitle: string };
