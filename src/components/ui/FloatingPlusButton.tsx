@@ -1,7 +1,9 @@
 import { Pressable, useColorScheme, StyleSheet, View } from "react-native";
-import { BlurView } from "expo-blur";
 import { Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { GlassWrapper } from "./GlassWrapper";
+import { useGlassEffect } from "@/hooks/useGlassEffect";
+import { BRAND_COLORS } from "@/constants/colors";
 
 interface FloatingPlusButtonProps {
   onPress: () => void;
@@ -9,12 +11,16 @@ interface FloatingPlusButtonProps {
 
 /**
  * Purple-tinted glass button with plus icon for creating new tasks.
+ * Uses native iOS 26 glass effect when available, falls back to BlurView.
  */
 export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { isAvailable: isGlassAvailable } = useGlassEffect();
 
-  const borderColor = isDark ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.3)";
+  const borderColor = isDark
+    ? "rgba(255,255,255,0.2)"
+    : "rgba(255,255,255,0.3)";
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -26,23 +32,31 @@ export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
       onPress={handlePress}
       style={({ pressed }) => [
         styles.container,
+        // Use scale transform only for pressed state (opacity breaks glass effect)
         pressed && styles.pressed,
       ]}
     >
-      <BlurView
-        intensity={80}
-        tint={isDark ? "dark" : "light"}
-        style={styles.blurView}
+      <GlassWrapper
+        style={styles.glassView}
+        glassStyle="clear"
+        tintColor={BRAND_COLORS.primary}
+        isInteractive={false}
+        fallbackIntensity={80}
+        fallbackBackgroundColor="rgba(99,102,241,0.85)"
       >
         <View
           style={[
             styles.innerContainer,
-            { borderColor },
+            // Only show border/background on fallback mode
+            !isGlassAvailable && {
+              borderColor,
+              backgroundColor: "rgba(99,102,241,0.85)",
+            },
           ]}
         >
           <Plus size={24} color="#FFFFFF" strokeWidth={2.5} />
         </View>
-      </BlurView>
+      </GlassWrapper>
     </Pressable>
   );
 }
@@ -61,10 +75,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   pressed: {
-    opacity: 0.8,
+    // Avoid opacity < 1 on glass effect, use scale only
     transform: [{ scale: 0.96 }],
   },
-  blurView: {
+  glassView: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -75,8 +89,8 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(99,102,241,0.85)", // Purple with slight transparency
     borderWidth: 0.5,
     borderRadius: 24,
+    borderColor: "transparent",
   },
 });
