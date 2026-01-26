@@ -5,15 +5,48 @@ import { useMutationQueueStore } from "@/stores/mutationQueueStore";
 import { useTaskCacheStore } from "@/stores/taskCacheStore";
 import { useNetworkStore } from "@/stores/networkStore";
 import { createTaskPage } from "@/services/notion/operations/createPage";
-import {
-  TASKS_QUERY_KEY,
-  COMPLETED_TASKS_QUERY_KEY,
-} from "@/hooks/queries/useTasks";
+import { TASKS_QUERY_KEY } from "@/hooks/queries/useTasks";
 import type { Task, TaskStatus } from "@/types/task";
 
 interface CreateTaskParams {
   title: string;
   status: TaskStatus;
+}
+
+/**
+ * Helper to add a task to the query cache.
+ */
+function addTaskToCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  databaseId: string | null,
+  task: Task
+) {
+  // Add to main tasks cache at the beginning
+  queryClient.setQueryData<Task[]>(
+    [...TASKS_QUERY_KEY, databaseId],
+    (oldTasks) => {
+      if (!oldTasks) return [task];
+      return [task, ...oldTasks];
+    }
+  );
+}
+
+/**
+ * Helper to replace a temp task ID with the real ID in the cache.
+ */
+function replaceTaskIdInCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  databaseId: string | null,
+  tempId: string,
+  realTask: Task
+) {
+  queryClient.setQueryData<Task[]>(
+    [...TASKS_QUERY_KEY, databaseId],
+    (oldTasks) => {
+      if (!oldTasks) return oldTasks;
+      return oldTasks.map((t) => (t.id === tempId ? realTask : t));
+    }
+  );
 }
 
 /**
@@ -34,32 +67,12 @@ export function useCreateTask() {
         throw new Error("Database not configured");
       }
 
-      // Generate a temporary ID for optimistic updates
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Create optimistic task object
-      const optimisticTask: Task = {
-        id: tempId,
-        title,
-        status,
-        notionUrl: "",
-        lastEditedTime: new Date().toISOString(),
-        creationDate: new Date().toISOString(),
-      };
-
-      // Check if offline
+      // Check if offline - if so, just return early (optimistic update already done in onMutate)
+      // The mutation will be queued in onMutate when offline
       const isOffline = !useNetworkStore.getState().isConnected;
-
       if (isOffline) {
-        // Queue the mutation for later sync
-        await addMutation(tempId, "createTask", {
-          title,
-          statusId: status.id,
-          statusName: status.name
-        }, optimisticTask);
-        // Update local cache
-        await addCachedTask(optimisticTask);
-        return { task: optimisticTask, queued: true };
+        // Return a placeholder - the real task is already in cache from onMutate
+        return { task: null, queued: true };
       }
 
       // Determine if status is checkbox type
@@ -75,20 +88,78 @@ export function useCreateTask() {
         isCheckboxStatus,
       });
 
-      // Return the task with real ID
+      // Return the created task with real ID
       const createdTask: Task = {
-        ...optimisticTask,
         id: pageId,
+        title,
+        status,
         notionUrl: `https://notion.so/${pageId.replace(/-/g, "")}`,
+        lastEditedTime: new Date().toISOString(),
+        creationDate: new Date().toISOString(),
       };
 
       return { task: createdTask, queued: false };
     },
-    // No optimistic updates or cache manipulation - this mutation may be
-    // called from cleanup and we don't want to risk corrupting the cache.
-    // The new task will appear on next pull-to-refresh.
-    onError: (_error) => {
+    onMutate: async ({ title, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+
+      // Snapshot previous value for rollback
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
+
+      // Generate temp ID for optimistic update
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create optimistic task
+      const optimisticTask: Task = {
+        id: tempId,
+        title,
+        status,
+        notionUrl: "",
+        lastEditedTime: new Date().toISOString(),
+        creationDate: new Date().toISOString(),
+      };
+
+      // Optimistically add to query cache
+      addTaskToCache(queryClient, databaseId, optimisticTask);
+
+      // Check if offline - queue mutation and persist to local cache
+      const isOffline = !useNetworkStore.getState().isConnected;
+      if (isOffline) {
+        // Queue the mutation for later sync
+        await addMutation(tempId, "createTask", {
+          title,
+          statusId: status.id,
+          statusName: status.name
+        }, optimisticTask);
+        // Persist to local cache
+        await addCachedTask(optimisticTask);
+      }
+
+      return { previousTasks, tempId, optimisticTask, isOffline };
+    },
+    onError: (_error, _variables, context) => {
       console.error("Failed to create task:", _error);
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+      }
+      showToast("Failed to create task", "error");
+    },
+    onSuccess: async (data, _variables, context) => {
+      if (!data.queued && data.task && context?.tempId) {
+        // Replace temp task with real task in query cache
+        replaceTaskIdInCache(queryClient, databaseId, context.tempId, data.task);
+        // Also persist to local cache
+        await addCachedTask(data.task);
+      }
+      // If offline (queued), the task was already added to caches in onMutate
+    },
+    onSettled: (data) => {
+      // Only invalidate if not queued (online mutation)
+      if (!data?.queued) {
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+      }
     },
   });
 }

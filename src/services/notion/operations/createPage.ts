@@ -33,7 +33,6 @@ export async function createTaskPage({
     // Use pages.create with data_source_id as parent
     const response = await client.pages.create({
       parent: {
-        // @ts-expect-error - Notion API uses data_source_id for newer databases
         data_source_id: dataSourceId,
       },
       properties: {
