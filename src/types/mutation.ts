@@ -16,10 +16,33 @@ export type MutationType =
   | "updateUrl";
 
 /**
+ * Task type value for create mutation.
+ */
+export type CreateTaskTypeValue =
+  | { type: "select"; name: string }
+  | { type: "relation"; pageId: string; displayName: string };
+
+/**
+ * Project value for create mutation.
+ */
+export type CreateProjectValue =
+  | { type: "select"; name: string }
+  | { type: "relation"; pageId: string; displayName: string };
+
+/**
  * Payload types for each mutation type.
  */
 export interface MutationPayloads {
-  createTask: { title: string; statusId: string; statusName: string };
+  createTask: {
+    title: string;
+    statusId: string;
+    statusName: string;
+    doDate?: string;
+    dueDate?: string;
+    taskType?: CreateTaskTypeValue;
+    project?: CreateProjectValue;
+    url?: string;
+  };
   updateStatus: { newStatus: TaskStatus };
   updateCheckbox: { checked: boolean };
   updateTitle: { newTitle: string };

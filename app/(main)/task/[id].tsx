@@ -1,12 +1,12 @@
 import { useCallback, useState, useEffect } from "react";
-import { View, ScrollView, Text, useColorScheme, useWindowDimensions, Pressable, Linking } from "react-native";
+import { View, ScrollView, Text, useColorScheme, useWindowDimensions, Pressable, Linking, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTask } from "@/hooks/queries/useTask";
 import { usePageContent } from "@/hooks/queries/usePageContent";
 import { TaskDetailHeader } from "@/components/tasks/TaskDetailHeader";
 import { TaskDetailContent } from "@/components/tasks/TaskDetailContent";
-import { IOS_BACKGROUNDS } from "@/constants/colors";
+import { IOS_BACKGROUNDS, BRAND_COLORS } from "@/constants/colors";
 
 // Threshold for considering the sheet "full screen" (percentage of screen height)
 const FULL_SCREEN_THRESHOLD = 0.7;
@@ -32,8 +32,8 @@ export default function TaskDetailScreen() {
   // Track whether sheet is in full screen mode
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Get task from cache
-  const task = useTask(id);
+  // Get task from cache or fetch from server
+  const { task, isLoading, isError } = useTask(id);
 
   // Fetch page content
   const { data: blocks, isLoading: isLoadingContent } = usePageContent(id);
@@ -59,21 +59,22 @@ export default function TaskDetailScreen() {
     [screenHeight]
   );
 
-  // If task not found, go back
+  // Navigate back if fetch failed (task not found)
   useEffect(() => {
-    if (id && !task) {
-      // Give the cache a moment to populate
-      const timeout = setTimeout(() => {
-        if (!task) {
-          router.back();
-        }
-      }, 100);
-      return () => clearTimeout(timeout);
+    if (isError) {
+      router.back();
     }
-  }, [id, task]);
+  }, [isError]);
 
+  // Show loading state while fetching
   if (!task) {
-    return <View style={{ flex: 1, backgroundColor: groupedBg }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: groupedBg }}>
+        <View style={{ paddingTop: 100, alignItems: "center" }}>
+          {isLoading && <ActivityIndicator size="large" color={BRAND_COLORS.primary} />}
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -100,6 +101,7 @@ export default function TaskDetailScreen() {
           }}
         >
           <TaskDetailContent
+            mode="edit"
             task={task}
             blocks={blocks}
             isLoadingContent={isLoadingContent}

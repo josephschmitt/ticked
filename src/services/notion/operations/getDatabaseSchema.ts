@@ -31,7 +31,8 @@ interface PropertyResponse {
     groups: StatusGroupResponse[];
   };
   relation?: {
-    database_id: string;
+    database_id?: string;       // Legacy field
+    data_source_id?: string;    // New field (API 2025-09-03)
     type: string;
   };
 }
@@ -119,8 +120,9 @@ export async function getDatabaseSchema(
       }
 
       // Add relation database ID
+      // Prefer data_source_id (new API 2025-09-03), fall back to database_id (legacy)
       if (prop.type === "relation" && prop.relation) {
-        baseProperty.relationDatabaseId = prop.relation.database_id;
+        baseProperty.relationDatabaseId = prop.relation.data_source_id ?? prop.relation.database_id;
       }
 
       return baseProperty;

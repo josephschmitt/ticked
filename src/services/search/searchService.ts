@@ -13,7 +13,8 @@ interface SearchResult {
   last_edited_time: string;
   parent: {
     type: string;
-    database_id?: string;
+    database_id?: string;      // Legacy
+    data_source_id?: string;   // New (API 2025-09-03)
   };
   properties: Record<string, PropertyValue>;
 }
@@ -360,11 +361,13 @@ export async function searchTasksOnline(
   // Normalize database ID by removing hyphens for comparison
   const normalizedDbId = databaseId.replace(/-/g, "");
   const filteredResults = response.results.filter((page) => {
-    if (page.parent.type !== "database_id" || !page.parent.database_id) {
+    // Handle both legacy database_id and new data_source_id parent types
+    if (page.parent.type !== "database_id" && page.parent.type !== "data_source_id") {
       return false;
     }
-    const pageDbId = page.parent.database_id.replace(/-/g, "");
-    return pageDbId === normalizedDbId;
+    // Prefer data_source_id (new API), fall back to database_id (legacy)
+    const parentDbId = (page.parent.data_source_id ?? page.parent.database_id ?? "").replace(/-/g, "");
+    return parentDbId === normalizedDbId;
   });
 
   // Limit to 50 results

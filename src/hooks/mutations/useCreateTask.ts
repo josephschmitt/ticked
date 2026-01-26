@@ -7,10 +7,26 @@ import { useNetworkStore } from "@/stores/networkStore";
 import { createTaskPage } from "@/services/notion/operations/createPage";
 import { TASKS_QUERY_KEY } from "@/hooks/queries/useTasks";
 import type { Task, TaskStatus } from "@/types/task";
+import type { DatabaseIcon } from "@/types/database";
 
-interface CreateTaskParams {
+export type TaskTypeValue =
+  | { type: "select"; name: string }
+  | { type: "relation"; pageId: string; displayName: string };
+
+export type ProjectValue =
+  | { type: "select"; name: string }
+  | { type: "relation"; pageId: string; displayName: string };
+
+export interface CreateTaskParams {
   title: string;
   status: TaskStatus;
+  doDate?: string;
+  dueDate?: string;
+  taskType?: TaskTypeValue;
+  taskTypeIcon?: DatabaseIcon | null;
+  project?: ProjectValue;
+  projectIcon?: DatabaseIcon | null;
+  url?: string;
 }
 
 /**
@@ -62,7 +78,9 @@ export function useCreateTask() {
   const addCachedTask = useTaskCacheStore((state) => state.addTask);
 
   return useMutation({
-    mutationFn: async ({ title, status }: CreateTaskParams) => {
+    mutationFn: async (params: CreateTaskParams) => {
+      const { title, status, doDate, dueDate, taskType, taskTypeIcon, project, projectIcon, url } = params;
+
       if (!databaseId || !fieldMapping?.taskName || !fieldMapping?.status) {
         throw new Error("Database not configured");
       }
@@ -78,6 +96,31 @@ export function useCreateTask() {
       // Determine if status is checkbox type
       const isCheckboxStatus = status.id === "checked" || status.id === "unchecked";
 
+      // Build optional field options for createTaskPage
+      const doDateOption = doDate && fieldMapping.doDate
+        ? { propertyId: fieldMapping.doDate, date: doDate }
+        : undefined;
+
+      const dueDateOption = dueDate && fieldMapping.dueDate
+        ? { propertyId: fieldMapping.dueDate, date: dueDate }
+        : undefined;
+
+      const taskTypeOption = taskType && fieldMapping.taskType
+        ? taskType.type === "select"
+          ? { propertyId: fieldMapping.taskType, type: "select" as const, value: taskType.name }
+          : { propertyId: fieldMapping.taskType, type: "relation" as const, value: [taskType.pageId] }
+        : undefined;
+
+      const projectOption = project && fieldMapping.project
+        ? project.type === "select"
+          ? { propertyId: fieldMapping.project, type: "select" as const, value: project.name }
+          : { propertyId: fieldMapping.project, type: "relation" as const, value: [project.pageId] }
+        : undefined;
+
+      const urlOption = url && fieldMapping.url
+        ? { propertyId: fieldMapping.url, url }
+        : undefined;
+
       // Create the task in Notion (databaseId is actually a dataSourceId)
       const pageId = await createTaskPage({
         dataSourceId: databaseId,
@@ -86,6 +129,11 @@ export function useCreateTask() {
         statusPropertyId: fieldMapping.status,
         statusName: status.name,
         isCheckboxStatus,
+        doDate: doDateOption,
+        dueDate: dueDateOption,
+        taskType: taskTypeOption,
+        project: projectOption,
+        url: urlOption,
       });
 
       // Return the created task with real ID
@@ -93,6 +141,17 @@ export function useCreateTask() {
         id: pageId,
         title,
         status,
+        doDate,
+        dueDate,
+        taskType: taskType
+          ? taskType.type === "select" ? taskType.name : taskType.displayName
+          : undefined,
+        taskTypeIcon: taskTypeIcon ?? undefined,
+        project: project
+          ? project.type === "select" ? project.name : project.displayName
+          : undefined,
+        projectIcon: projectIcon ?? undefined,
+        url,
         notionUrl: `https://notion.so/${pageId.replace(/-/g, "")}`,
         lastEditedTime: new Date().toISOString(),
         creationDate: new Date().toISOString(),
@@ -100,7 +159,9 @@ export function useCreateTask() {
 
       return { task: createdTask, queued: false };
     },
-    onMutate: async ({ title, status }) => {
+    onMutate: async (params: CreateTaskParams) => {
+      const { title, status, doDate, dueDate, taskType, taskTypeIcon, project, projectIcon, url } = params;
+
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
 
@@ -110,11 +171,22 @@ export function useCreateTask() {
       // Generate temp ID for optimistic update
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Create optimistic task
+      // Create optimistic task with all fields
       const optimisticTask: Task = {
         id: tempId,
         title,
         status,
+        doDate,
+        dueDate,
+        taskType: taskType
+          ? taskType.type === "select" ? taskType.name : taskType.displayName
+          : undefined,
+        taskTypeIcon: taskTypeIcon ?? undefined,
+        project: project
+          ? project.type === "select" ? project.name : project.displayName
+          : undefined,
+        projectIcon: projectIcon ?? undefined,
+        url,
         notionUrl: "",
         lastEditedTime: new Date().toISOString(),
         creationDate: new Date().toISOString(),
@@ -130,7 +202,12 @@ export function useCreateTask() {
         await addMutation(tempId, "createTask", {
           title,
           statusId: status.id,
-          statusName: status.name
+          statusName: status.name,
+          doDate,
+          dueDate,
+          taskType,
+          project,
+          url,
         }, optimisticTask);
         // Persist to local cache
         await addCachedTask(optimisticTask);

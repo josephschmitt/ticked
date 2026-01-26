@@ -454,6 +454,57 @@ export async function getTasksPaginated(
 }
 
 /**
+ * Fetch a single task by ID.
+ * Used as a fallback when the task isn't in the cache.
+ */
+export async function getTaskById(
+  taskId: string,
+  fieldMapping: FieldMapping
+): Promise<Task | null> {
+  const client = getNotionClient();
+
+  try {
+    const page = (await client.pages.retrieve({
+      page_id: taskId,
+    })) as unknown as PageResult & {
+      url: string;
+      created_time: string;
+      last_edited_time: string;
+    };
+
+    // Build property map by ID
+    const propertyMap = new Map<string, PropertyValue>();
+    for (const [_name, prop] of Object.entries(page.properties)) {
+      if (prop.id) {
+        propertyMap.set(prop.id, prop);
+      }
+    }
+
+    // Collect relation IDs we need to resolve
+    const relationIds = new Set<string>();
+    const relationPropertyIds = [fieldMapping.taskType, fieldMapping.project].filter(Boolean) as string[];
+
+    for (const prop of Object.values(page.properties)) {
+      if (prop.type === "relation" && prop.relation && relationPropertyIds.includes(prop.id || "")) {
+        for (const rel of prop.relation) {
+          relationIds.add(rel.id);
+        }
+      }
+    }
+
+    // Fetch info for related pages
+    const relationInfos = relationIds.size > 0
+      ? await getPageInfos(Array.from(relationIds))
+      : new Map<string, PageInfo>();
+
+    return pageToTask(page, fieldMapping, propertyMap, relationInfos);
+  } catch (error) {
+    console.error(`Failed to fetch task ${taskId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get unique status values from a data source.
  * Note: As of Notion API 2025-09-03, databases are now called "data sources".
  */

@@ -6,13 +6,13 @@ import {
   Linking,
   useColorScheme,
   ActivityIndicator,
-  StyleSheet,
   TextInput,
   Alert,
 } from "react-native";
 import { Circle, CheckCircle2, Link as LinkIcon, FolderOpen, Tag, Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
-import type { Task } from "@/types/task";
+import type { Task, TaskStatus } from "@/types/task";
+import type { DatabaseIcon } from "@/types/database";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import { MarkdownContent } from "@/components/notion/MarkdownContent";
 import { RelationBadge } from "@/components/ui/RelationBadge";
@@ -33,30 +33,44 @@ import {
   useUpdateTaskRelation,
   useUpdateTaskUrl,
 } from "@/hooks/mutations/useUpdateTask";
+import type { CreateTaskParams, TaskTypeValue, ProjectValue } from "@/hooks/mutations/useCreateTask";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
 /** Strip protocol (https://, http://) from URL for display */
 const formatDisplayUrl = (url: string) => url.replace(/^https?:\/\//, "");
 
 interface TaskDetailContentProps {
-  task: Task;
-  blocks: NotionBlock[] | undefined;
-  isLoadingContent: boolean;
+  // Edit mode: provide task and blocks
+  task?: Task;
+  blocks?: NotionBlock[];
+  isLoadingContent?: boolean;
   isFullScreen: boolean;
+  // Create mode: provide these instead
+  mode?: "edit" | "create";
+  initialStatus?: TaskStatus | null;
+  onCreateTask?: (params: CreateTaskParams) => void;
 }
 
 /**
  * Main content area for the task detail sheet.
  * Shows editable title, metadata, and page content.
+ * Supports both "edit" mode (with existing task) and "create" mode (for new tasks).
  */
 export function TaskDetailContent({
   task,
   blocks,
-  isLoadingContent,
+  isLoadingContent = false,
   isFullScreen,
+  mode: modeProp,
+  initialStatus,
+  onCreateTask,
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  // Determine mode from props
+  const mode = modeProp ?? (task ? "edit" : "create");
+  const isCreateMode = mode === "create";
 
   // Store state
   const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
@@ -80,7 +94,7 @@ export function TaskDetailContent({
     projectProperty?.type === "relation" ? projectProperty.relationDatabaseId : undefined
   );
 
-  // Mutations
+  // Mutations (only used in edit mode)
   const updateStatusMutation = useUpdateTaskStatus();
   const updateCheckboxMutation = useUpdateTaskCheckbox();
   const updateTitleMutation = useUpdateTaskTitle();
@@ -92,35 +106,122 @@ export function TaskDetailContent({
   // Ref for title input
   const titleInputRef = useRef<TextInput>(null);
 
-  // Local state for editing
-  const [localTitle, setLocalTitle] = useState(task.title);
+  // Local state for all fields (used in create mode, synced from task in edit mode)
+  const [localTitle, setLocalTitle] = useState(task?.title ?? "");
+  const [localStatus, setLocalStatus] = useState<TaskStatus | null>(task?.status ?? initialStatus ?? null);
+  const [localDoDate, setLocalDoDate] = useState<string | undefined>(task?.doDate);
+  const [localDueDate, setLocalDueDate] = useState<string | undefined>(task?.dueDate);
+  const [localTaskType, setLocalTaskType] = useState<TaskTypeValue | null>(null);
+  const [localTaskTypeIcon, setLocalTaskTypeIcon] = useState<DatabaseIcon | null>(task?.taskTypeIcon ?? null);
+  const [localProject, setLocalProject] = useState<ProjectValue | null>(null);
+  const [localProjectIcon, setLocalProjectIcon] = useState<DatabaseIcon | null>(task?.projectIcon ?? null);
+  const [localUrl, setLocalUrl] = useState<string | undefined>(task?.url);
+
+  // Picker visibility state
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showTaskTypePicker, setShowTaskTypePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showUrlEditor, setShowUrlEditor] = useState(false);
-  const [editedUrl, setEditedUrl] = useState(task.url || "");
+  const [editedUrl, setEditedUrl] = useState(task?.url || "");
 
-  // Auto-focus title if empty (new task)
+  // Refs for unmount access in create mode
+  const titleRef = useRef(localTitle);
+  const statusRef = useRef(localStatus);
+  const doDateRef = useRef(localDoDate);
+  const dueDateRef = useRef(localDueDate);
+  const taskTypeRef = useRef(localTaskType);
+  const taskTypeIconRef = useRef(localTaskTypeIcon);
+  const projectRef = useRef(localProject);
+  const projectIconRef = useRef(localProjectIcon);
+  const urlRef = useRef(localUrl);
+  const onCreateTaskRef = useRef(onCreateTask);
+
+  // Keep refs in sync with state
+  useEffect(() => { titleRef.current = localTitle; }, [localTitle]);
+  useEffect(() => { statusRef.current = localStatus; }, [localStatus]);
+  useEffect(() => { doDateRef.current = localDoDate; }, [localDoDate]);
+  useEffect(() => { dueDateRef.current = localDueDate; }, [localDueDate]);
+  useEffect(() => { taskTypeRef.current = localTaskType; }, [localTaskType]);
+  useEffect(() => { taskTypeIconRef.current = localTaskTypeIcon; }, [localTaskTypeIcon]);
+  useEffect(() => { projectRef.current = localProject; }, [localProject]);
+  useEffect(() => { projectIconRef.current = localProjectIcon; }, [localProjectIcon]);
+  useEffect(() => { urlRef.current = localUrl; }, [localUrl]);
+  useEffect(() => { onCreateTaskRef.current = onCreateTask; }, [onCreateTask]);
+
+  // Create task on unmount in create mode
   useEffect(() => {
-    if (!task.title) {
+    if (!isCreateMode) return;
+
+    return () => {
+      const finalTitle = titleRef.current.trim();
+      const finalStatus = statusRef.current;
+
+      if (finalTitle && finalStatus && onCreateTaskRef.current) {
+        onCreateTaskRef.current({
+          title: finalTitle,
+          status: finalStatus,
+          doDate: doDateRef.current,
+          dueDate: dueDateRef.current,
+          taskType: taskTypeRef.current ?? undefined,
+          taskTypeIcon: taskTypeIconRef.current,
+          project: projectRef.current ?? undefined,
+          projectIcon: projectIconRef.current,
+          url: urlRef.current,
+        });
+      }
+    };
+  }, [isCreateMode]);
+
+  // Sync local state with task prop in edit mode
+  useEffect(() => {
+    if (!isCreateMode && task) {
+      setLocalTitle(task.title);
+      setLocalStatus(task.status);
+      setLocalDoDate(task.doDate);
+      setLocalDueDate(task.dueDate);
+      setLocalTaskTypeIcon(task.taskTypeIcon ?? null);
+      setLocalProjectIcon(task.projectIcon ?? null);
+      setLocalUrl(task.url);
+      setEditedUrl(task.url || "");
+    }
+  }, [isCreateMode, task]);
+
+  // Auto-focus title if empty (new task or create mode)
+  useEffect(() => {
+    if (isCreateMode || !task?.title) {
       const timeout = setTimeout(() => {
         titleInputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timeout);
     }
-  }, [task.title]);
+  }, [isCreateMode, task?.title]);
+
+  // Display values (use local state in create mode, task props in edit mode)
+  const displayTitle = isCreateMode ? localTitle : (task?.title ?? "");
+  const displayStatus = isCreateMode ? localStatus : task?.status;
+  const displayDoDate = isCreateMode ? localDoDate : task?.doDate;
+  const displayDueDate = isCreateMode ? localDueDate : task?.dueDate;
+  const displayTaskType = isCreateMode
+    ? (localTaskType?.type === "select" ? localTaskType.name : localTaskType?.displayName)
+    : task?.taskType;
+  const displayTaskTypeIcon = isCreateMode ? localTaskTypeIcon : task?.taskTypeIcon;
+  const displayProject = isCreateMode
+    ? (localProject?.type === "select" ? localProject.name : localProject?.displayName)
+    : task?.project;
+  const displayProjectIcon = isCreateMode ? localProjectIcon : task?.projectIcon;
+  const displayUrl = isCreateMode ? localUrl : task?.url;
 
   // Computed values
-  const isComplete = task.status.group === "complete";
-  const statusColorKey = task.status.color as NotionColor;
-  const statusBgColor = NOTION_COLORS[statusColorKey]
+  const isComplete = displayStatus?.group === "complete";
+  const statusColorKey = displayStatus?.color as NotionColor;
+  const statusBgColor = statusColorKey && NOTION_COLORS[statusColorKey]
     ? (isDark ? NOTION_COLORS[statusColorKey].dark : NOTION_COLORS[statusColorKey].light)
     : (isDark ? NOTION_COLORS.default.dark : NOTION_COLORS.default.light);
 
   const checkboxColor = isComplete ? BRAND_COLORS.primary : (isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3);
   const secondaryColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
-  const isCheckboxType = task.status.id === "checked" || task.status.id === "unchecked";
+  const isCheckboxType = displayStatus?.id === "checked" || displayStatus?.id === "unchecked";
   const isToggling = updateStatusMutation.isPending || updateCheckboxMutation.isPending;
 
   // Handlers
@@ -128,6 +229,23 @@ export function TaskDetailContent({
     if (isToggling) return;
 
     Haptics.selectionAsync();
+
+    if (isCreateMode) {
+      // In create mode, toggle between todo and complete status
+      if (statuses) {
+        if (isComplete) {
+          const todoStatus = statuses.find((s) => s.group === "todo") || statuses[0];
+          setLocalStatus(todoStatus);
+        } else {
+          const completeStatus = statuses.find((s) => s.group === "complete");
+          if (completeStatus) setLocalStatus(completeStatus);
+        }
+      }
+      return;
+    }
+
+    // Edit mode - update via mutations
+    if (!task) return;
 
     if (isCheckboxType) {
       const newChecked = task.status.id !== "checked";
@@ -168,10 +286,22 @@ export function TaskDetailContent({
         }
       }
     }
-  }, [isToggling, isCheckboxType, task, statuses, defaultStatusId, isComplete, updateCheckboxMutation, updateStatusMutation]);
+  }, [isToggling, isCheckboxType, task, statuses, defaultStatusId, isComplete, updateCheckboxMutation, updateStatusMutation, isCreateMode]);
 
   const handleTitleSubmit = useCallback(() => {
     const trimmedTitle = localTitle.trim();
+
+    if (isCreateMode) {
+      // In create mode, just keep local state (will be used on unmount)
+      if (!trimmedTitle) {
+        setLocalTitle("");
+      }
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     if (trimmedTitle && trimmedTitle !== task.title) {
       updateTitleMutation.mutate(
         { task, newTitle: trimmedTitle },
@@ -188,7 +318,7 @@ export function TaskDetailContent({
       // Revert if empty
       setLocalTitle(task.title);
     }
-  }, [localTitle, task, updateTitleMutation]);
+  }, [localTitle, task, updateTitleMutation, isCreateMode]);
 
   const handleStatusPress = useCallback(() => {
     if (isCheckboxType) return; // Checkbox types use the checkbox
@@ -196,8 +326,17 @@ export function TaskDetailContent({
     setShowStatusPicker(true);
   }, [isCheckboxType]);
 
-  const handleStatusSelect = useCallback((status: typeof task.status) => {
+  const handleStatusSelect = useCallback((status: TaskStatus) => {
     setShowStatusPicker(false);
+
+    if (isCreateMode) {
+      setLocalStatus(status);
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     if (status.id !== task.status.id) {
       updateStatusMutation.mutate(
         { task, newStatus: status },
@@ -207,7 +346,7 @@ export function TaskDetailContent({
         }
       );
     }
-  }, [task, updateStatusMutation]);
+  }, [task, updateStatusMutation, isCreateMode]);
 
   const handleTaskTypePress = useCallback(() => {
     Haptics.selectionAsync();
@@ -216,6 +355,21 @@ export function TaskDetailContent({
 
   const handleTaskTypeSelectChange = useCallback((option: SelectOption | null) => {
     setShowTaskTypePicker(false);
+
+    if (isCreateMode) {
+      if (option) {
+        setLocalTaskType({ type: "select", name: option.name });
+        setLocalTaskTypeIcon(null); // Select options don't have icons
+      } else {
+        setLocalTaskType(null);
+        setLocalTaskTypeIcon(null);
+      }
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     const optionName = option?.name || null;
     if (optionName !== task.taskType) {
       updateSelectMutation.mutate(
@@ -226,10 +380,25 @@ export function TaskDetailContent({
         }
       );
     }
-  }, [task, updateSelectMutation]);
+  }, [task, updateSelectMutation, isCreateMode]);
 
-  const handleTaskTypeRelationChange = useCallback((option: { id: string; title: string } | null) => {
+  const handleTaskTypeRelationChange = useCallback((option: { id: string; title: string; icon?: DatabaseIcon | null } | null) => {
     setShowTaskTypePicker(false);
+
+    if (isCreateMode) {
+      if (option) {
+        setLocalTaskType({ type: "relation", pageId: option.id, displayName: option.title });
+        setLocalTaskTypeIcon(option.icon ?? null);
+      } else {
+        setLocalTaskType(null);
+        setLocalTaskTypeIcon(null);
+      }
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     const pageIds = option ? [option.id] : [];
     const displayName = option?.title || null;
     updateRelationMutation.mutate(
@@ -239,7 +408,7 @@ export function TaskDetailContent({
         onError: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
       }
     );
-  }, [task, updateRelationMutation]);
+  }, [task, updateRelationMutation, isCreateMode]);
 
   const handleProjectPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -248,6 +417,21 @@ export function TaskDetailContent({
 
   const handleProjectSelectChange = useCallback((option: SelectOption | null) => {
     setShowProjectPicker(false);
+
+    if (isCreateMode) {
+      if (option) {
+        setLocalProject({ type: "select", name: option.name });
+        setLocalProjectIcon(null);
+      } else {
+        setLocalProject(null);
+        setLocalProjectIcon(null);
+      }
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     const optionName = option?.name || null;
     if (optionName !== task.project) {
       updateSelectMutation.mutate(
@@ -258,10 +442,25 @@ export function TaskDetailContent({
         }
       );
     }
-  }, [task, updateSelectMutation]);
+  }, [task, updateSelectMutation, isCreateMode]);
 
-  const handleProjectRelationChange = useCallback((option: { id: string; title: string } | null) => {
+  const handleProjectRelationChange = useCallback((option: { id: string; title: string; icon?: DatabaseIcon | null } | null) => {
     setShowProjectPicker(false);
+
+    if (isCreateMode) {
+      if (option) {
+        setLocalProject({ type: "relation", pageId: option.id, displayName: option.title });
+        setLocalProjectIcon(option.icon ?? null);
+      } else {
+        setLocalProject(null);
+        setLocalProjectIcon(null);
+      }
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     const pageIds = option ? [option.id] : [];
     const displayName = option?.title || null;
     updateRelationMutation.mutate(
@@ -271,9 +470,17 @@ export function TaskDetailContent({
         onError: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
       }
     );
-  }, [task, updateRelationMutation]);
+  }, [task, updateRelationMutation, isCreateMode]);
 
   const handleDoDateChange = useCallback((date: string | null) => {
+    if (isCreateMode) {
+      setLocalDoDate(date ?? undefined);
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     updateDateMutation.mutate(
       { task, field: "doDate", date },
       {
@@ -281,9 +488,17 @@ export function TaskDetailContent({
         onError: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
       }
     );
-  }, [task, updateDateMutation]);
+  }, [task, updateDateMutation, isCreateMode]);
 
   const handleDueDateChange = useCallback((date: string | null) => {
+    if (isCreateMode) {
+      setLocalDueDate(date ?? undefined);
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     updateDateMutation.mutate(
       { task, field: "dueDate", date },
       {
@@ -291,11 +506,21 @@ export function TaskDetailContent({
         onError: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
       }
     );
-  }, [task, updateDateMutation]);
+  }, [task, updateDateMutation, isCreateMode]);
 
   const handleUrlPress = useCallback(() => {
     Haptics.selectionAsync();
-    // Show options: Edit, Open, or Clear
+
+    if (isCreateMode) {
+      // In create mode, just open the editor
+      setEditedUrl(localUrl || "");
+      setShowUrlEditor(true);
+      return;
+    }
+
+    // Edit mode - show options: Edit, Open, or Clear
+    if (!task) return;
+
     Alert.alert(
       "URL",
       task.url || undefined,
@@ -333,11 +558,20 @@ export function TaskDetailContent({
         { text: "Cancel", style: "cancel" },
       ]
     );
-  }, [task, updateUrlMutation]);
+  }, [task, updateUrlMutation, isCreateMode, localUrl]);
 
   const handleUrlSubmit = useCallback(() => {
     const trimmedUrl = editedUrl.trim();
     setShowUrlEditor(false);
+
+    if (isCreateMode) {
+      setLocalUrl(trimmedUrl || undefined);
+      return;
+    }
+
+    // Edit mode
+    if (!task) return;
+
     if (trimmedUrl !== (task.url || "")) {
       updateUrlMutation.mutate(
         { task, url: trimmedUrl || null },
@@ -347,14 +581,14 @@ export function TaskDetailContent({
         }
       );
     }
-  }, [editedUrl, task, updateUrlMutation]);
+  }, [editedUrl, task, updateUrlMutation, isCreateMode]);
 
   const handleContentPress = useCallback(() => {
     Haptics.selectionAsync();
-    if (task.notionUrl) {
+    if (task?.notionUrl) {
       Linking.openURL(task.notionUrl);
     }
-  }, [task.notionUrl]);
+  }, [task?.notionUrl]);
 
   // Determine if we have date fields configured
   const hasDoDateField = !!fieldMapping?.doDate;
@@ -364,10 +598,14 @@ export function TaskDetailContent({
   const hasProjectField = !!fieldMapping?.project;
 
   // Find current relation IDs for pickers
-  // Note: We'd need to store the relation IDs on the task to properly handle this
-  // For now, we'll match by name
-  const currentTaskTypeRelationId = taskTypeRelationOptions?.find((o) => o.title === task.taskType)?.id || null;
-  const currentProjectRelationId = projectRelationOptions?.find((o) => o.title === task.project)?.id || null;
+  // In create mode with relation, use the localTaskType/localProject pageId directly
+  // In edit mode, match by name
+  const currentTaskTypeRelationId = isCreateMode
+    ? (localTaskType?.type === "relation" ? localTaskType.pageId : null)
+    : (taskTypeRelationOptions?.find((o) => o.title === task?.taskType)?.id || null);
+  const currentProjectRelationId = isCreateMode
+    ? (localProject?.type === "relation" ? localProject.pageId : null)
+    : (projectRelationOptions?.find((o) => o.title === task?.project)?.id || null);
 
   return (
     <View className="px-6 pt-8">
@@ -413,14 +651,14 @@ export function TaskDetailContent({
       {/* Metadata row - Status, Task Type, Project */}
       <View className="flex-row flex-wrap items-center mb-2 gap-1.5 ml-10">
         {/* Status badge */}
-        {!isCheckboxType && (
+        {!isCheckboxType && displayStatus && (
           <Pressable onPress={handleStatusPress} className="active:opacity-70">
             <View
               className="px-2.5 py-1 rounded-full"
               style={{ backgroundColor: statusBgColor }}
             >
               <Text className="text-[13px] font-medium text-label-primary dark:text-label-dark-primary">
-                {task.status.name}
+                {displayStatus.name}
               </Text>
             </View>
           </Pressable>
@@ -429,10 +667,10 @@ export function TaskDetailContent({
         {/* Task Type */}
         {hasTaskTypeField && (
           <Pressable onPress={handleTaskTypePress} className="flex-row items-center px-1 py-1 active:opacity-70">
-            {task.taskType ? (
+            {displayTaskType ? (
               <RelationBadge
-                name={task.taskType}
-                icon={task.taskTypeIcon}
+                name={displayTaskType}
+                icon={displayTaskTypeIcon}
                 fallbackIcon={Tag}
                 size="medium"
               />
@@ -450,10 +688,10 @@ export function TaskDetailContent({
         {/* Project */}
         {hasProjectField && (
           <Pressable onPress={handleProjectPress} className="flex-row items-center px-1 py-1 active:opacity-70">
-            {task.project ? (
+            {displayProject ? (
               <RelationBadge
-                name={task.project}
-                icon={task.projectIcon}
+                name={displayProject}
+                icon={displayProjectIcon}
                 fallbackIcon={FolderOpen}
                 size="medium"
               />
@@ -475,7 +713,7 @@ export function TaskDetailContent({
         {hasDoDateField && (
           <View className={`flex-row items-center px-1 py-1 ${isComplete ? 'opacity-60' : ''}`}>
             <EditableDateBadge
-              date={task.doDate}
+              date={displayDoDate}
               type="do"
               isComplete={isComplete}
               size="medium"
@@ -488,7 +726,7 @@ export function TaskDetailContent({
         {hasDueDateField && (
           <View className={`flex-row items-center px-1 py-1 ${isComplete ? 'opacity-60' : ''}`}>
             <EditableDateBadge
-              date={task.dueDate}
+              date={displayDueDate}
               type="due"
               isComplete={isComplete}
               size="medium"
@@ -511,13 +749,13 @@ export function TaskDetailContent({
               strokeWidth={2}
               style={{ flexShrink: 0 }}
             />
-            {task.url ? (
+            {displayUrl ? (
               <Text
                 className="text-[13px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {formatDisplayUrl(task.url)}
+                {formatDisplayUrl(displayUrl)}
               </Text>
             ) : (
               <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary ml-1">
@@ -537,37 +775,48 @@ export function TaskDetailContent({
         }}
       />
 
-      {/* Content area - tap to open in Notion */}
-      <Pressable onPress={handleContentPress} className="pb-8 active:opacity-70">
-        {isLoadingContent ? (
-          <View className="py-8 items-center">
-            <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
-          </View>
-        ) : blocks && blocks.length > 0 ? (
-          <>
-            <MarkdownContent blocks={blocks} />
-            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-4 text-center">
-              Tap to edit in Notion
-            </Text>
-          </>
-        ) : (
-          <View className="py-4 items-center">
-            <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
-              No content
-            </Text>
-            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-2">
-              Tap to add content in Notion
-            </Text>
-          </View>
-        )}
-      </Pressable>
+      {/* Content area - tap to open in Notion (only in edit mode) */}
+      {isCreateMode ? (
+        <View className="pb-8 items-center">
+          <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
+            No content
+          </Text>
+          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-2">
+            Add content after creating the task
+          </Text>
+        </View>
+      ) : (
+        <Pressable onPress={handleContentPress} className="pb-8 active:opacity-70">
+          {isLoadingContent ? (
+            <View className="py-8 items-center">
+              <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
+            </View>
+          ) : blocks && blocks.length > 0 ? (
+            <>
+              <MarkdownContent blocks={blocks} />
+              <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-4 text-center">
+                Tap to edit in Notion
+              </Text>
+            </>
+          ) : (
+            <View className="py-4 items-center">
+              <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
+                No content
+              </Text>
+              <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-2">
+                Tap to add content in Notion
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      )}
 
       {/* Status Picker */}
       {statuses && (
         <StatusPicker
           visible={showStatusPicker}
           statuses={statuses}
-          selectedId={task.status.id}
+          selectedId={displayStatus?.id || null}
           onSelect={handleStatusSelect}
           onCancel={() => setShowStatusPicker(false)}
         />
@@ -579,7 +828,7 @@ export function TaskDetailContent({
           visible={showTaskTypePicker}
           title="Task Type"
           options={taskTypeProperty.options}
-          selectedName={task.taskType || null}
+          selectedName={displayTaskType || null}
           onSelect={handleTaskTypeSelectChange}
           onCancel={() => setShowTaskTypePicker(false)}
         />
@@ -602,7 +851,7 @@ export function TaskDetailContent({
           visible={showProjectPicker}
           title="Project"
           options={projectProperty.options}
-          selectedName={task.project || null}
+          selectedName={displayProject || null}
           onSelect={handleProjectSelectChange}
           onCancel={() => setShowProjectPicker(false)}
         />
