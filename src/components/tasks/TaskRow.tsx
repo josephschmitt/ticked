@@ -10,6 +10,9 @@ import { useStatuses } from "@/hooks/queries/useTasks";
 import { useUpdateTaskStatus, useUpdateTaskCheckbox } from "@/hooks/mutations/useUpdateTask";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 
+/** Strip protocol (https://, http://) from URL for display */
+const formatDisplayUrl = (url: string) => url.replace(/^https?:\/\//, "");
+
 interface TaskRowProps {
   task: Task;
   onPress?: () => void;
@@ -223,7 +226,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {task.url}
+                    {formatDisplayUrl(task.url)}
                   </Text>
                 </View>
               )}

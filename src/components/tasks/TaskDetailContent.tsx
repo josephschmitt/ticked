@@ -35,6 +35,9 @@ import {
 } from "@/hooks/mutations/useUpdateTask";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
 
+/** Strip protocol (https://, http://) from URL for display */
+const formatDisplayUrl = (url: string) => url.replace(/^https?:\/\//, "");
+
 interface TaskDetailContentProps {
   task: Task;
   blocks: NotionBlock[] | undefined;
@@ -514,7 +517,7 @@ export function TaskDetailContent({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {task.url}
+                {formatDisplayUrl(task.url)}
               </Text>
             ) : (
               <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary ml-1">
