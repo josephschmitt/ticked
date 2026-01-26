@@ -86,6 +86,39 @@ Maps Notion database properties to app fields (`src/types/fieldMapping.ts`):
 - `Task` / `TaskStatus` / `StatusGroup` - App's internal task representation (`src/types/task.ts`)
 - `FieldMapping` - Maps app fields to Notion property IDs (`src/types/fieldMapping.ts`)
 
+## Notion API Guidelines
+
+**CRITICAL**: As of Notion API version 2025-09-03, "databases" are now called "data sources". Always use the new API methods and field names:
+
+### API Methods
+| Old (deprecated) | New (use this) |
+|-----------------|----------------|
+| `client.databases.retrieve()` | `client.dataSources.retrieve()` |
+| `client.databases.query()` | `client.dataSources.query()` |
+| `client.search({ filter: { value: "database" }})` | `client.search({ filter: { value: "data_source" }})` |
+
+### Field Names in API Calls
+| Old (deprecated) | New (use this) |
+|-----------------|----------------|
+| `database_id` | `data_source_id` |
+
+### Response Parsing
+When reading API responses, **prefer `data_source_id` but fall back to `database_id`** for compatibility:
+
+```typescript
+// Relation properties in schema
+const relationTargetId = prop.relation.data_source_id ?? prop.relation.database_id;
+
+// Page parent objects
+const parentId = page.parent.data_source_id ?? page.parent.database_id;
+
+// Parent type checking
+if (page.parent.type === "database_id" || page.parent.type === "data_source_id") { ... }
+```
+
+### Variable Naming
+Internal variables can still use "database" for clarity (e.g., `databaseId`, `selectedDatabaseId`), but API calls must use `data_source_id`.
+
 ## Environment Setup
 
 Copy `.env.example` to `.env` and set:

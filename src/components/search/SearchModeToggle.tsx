@@ -1,6 +1,8 @@
 import { View, Text, Pressable, StyleSheet, useColorScheme } from "react-native";
 import { Cloud, Smartphone } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { GlassWrapper } from "@/components/ui/GlassWrapper";
+import { useGlassEffect } from "@/hooks/useGlassEffect";
 import type { SearchMode } from "@/stores/searchStore";
 import { BRAND_COLORS, IOS_GRAYS, IOS_BACKGROUNDS } from "@/constants/colors";
 
@@ -21,8 +23,9 @@ export function SearchModeToggle({
 }: SearchModeToggleProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { isAvailable: isGlassAvailable } = useGlassEffect();
 
-  const bgColor = isDark ? IOS_BACKGROUNDS.elevated.dark : IOS_GRAYS.gray6;
+  const fallbackBgColor = isDark ? IOS_BACKGROUNDS.elevated.dark : IOS_GRAYS.gray6;
   const activeTextColor = "#FFFFFF";
   const inactiveTextColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
   const disabledColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.gray3;
@@ -38,70 +41,121 @@ export function SearchModeToggle({
 
   const isOnlineDisabled = disabled;
 
+  const renderOption = (
+    optionMode: SearchMode,
+    icon: React.ReactNode,
+    label: string,
+    isDisabled: boolean = false
+  ) => {
+    const isActive = mode === optionMode && !isDisabled;
+    const textColor = isDisabled
+      ? disabledColor
+      : isActive
+      ? activeTextColor
+      : inactiveTextColor;
+
+    const optionContent = (
+      <View style={styles.optionInner}>
+        {icon}
+        <Text style={[styles.optionText, { color: textColor }]}>{label}</Text>
+      </View>
+    );
+
+    // Active state with glass effect
+    if (isActive && isGlassAvailable) {
+      return (
+        <Pressable
+          key={optionMode}
+          onPress={() => handlePress(optionMode)}
+          disabled={isDisabled}
+          style={styles.option}
+        >
+          <GlassWrapper
+            style={styles.optionGlass}
+            glassStyle="regular"
+            tintColor={BRAND_COLORS.primary}
+            isInteractive={false}
+            fallbackBackgroundColor={BRAND_COLORS.primary}
+          >
+            {optionContent}
+          </GlassWrapper>
+        </Pressable>
+      );
+    }
+
+    // Active state without glass (fallback)
+    if (isActive) {
+      return (
+        <Pressable
+          key={optionMode}
+          onPress={() => handlePress(optionMode)}
+          disabled={isDisabled}
+          style={[styles.option, styles.optionActive, { backgroundColor: BRAND_COLORS.primary }]}
+        >
+          {optionContent}
+        </Pressable>
+      );
+    }
+
+    // Inactive state
+    return (
+      <Pressable
+        key={optionMode}
+        onPress={() => handlePress(optionMode)}
+        disabled={isDisabled}
+        style={styles.option}
+      >
+        {optionContent}
+      </Pressable>
+    );
+  };
+
+  const toggleContent = (
+    <>
+      {renderOption(
+        "online",
+        <Cloud
+          size={16}
+          color={
+            isOnlineDisabled
+              ? disabledColor
+              : mode === "online"
+              ? activeTextColor
+              : inactiveTextColor
+          }
+          strokeWidth={2}
+        />,
+        "Online",
+        isOnlineDisabled
+      )}
+      {renderOption(
+        "local",
+        <Smartphone
+          size={16}
+          color={mode === "local" ? activeTextColor : inactiveTextColor}
+          strokeWidth={2}
+        />,
+        "Local"
+      )}
+    </>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={[styles.toggleContainer, { backgroundColor: bgColor }]}>
-        {/* Online option */}
-        <Pressable
-          onPress={() => handlePress("online")}
-          disabled={isOnlineDisabled}
-          style={[
-            styles.option,
-            mode === "online" && !isOnlineDisabled && styles.optionActive,
-            mode === "online" && !isOnlineDisabled && { backgroundColor: BRAND_COLORS.primary },
-          ]}
+      {isGlassAvailable ? (
+        <GlassWrapper
+          style={styles.toggleContainer}
+          glassStyle="regular"
+          isInteractive={false}
+          fallbackBackgroundColor={fallbackBgColor}
         >
-          <Cloud
-            size={16}
-            color={
-              isOnlineDisabled
-                ? disabledColor
-                : mode === "online"
-                ? activeTextColor
-                : inactiveTextColor
-            }
-            strokeWidth={2}
-          />
-          <Text
-            style={[
-              styles.optionText,
-              {
-                color: isOnlineDisabled
-                  ? disabledColor
-                  : mode === "online"
-                  ? activeTextColor
-                  : inactiveTextColor,
-              },
-            ]}
-          >
-            Online
-          </Text>
-        </Pressable>
-
-        {/* Local option */}
-        <Pressable
-          onPress={() => handlePress("local")}
-          style={[
-            styles.option,
-            mode === "local" && styles.optionActive,
-            mode === "local" && { backgroundColor: BRAND_COLORS.primary },
-          ]}
-        >
-          <Smartphone
-            size={16}
-            color={mode === "local" ? activeTextColor : inactiveTextColor}
-            strokeWidth={2}
-          />
-          <Text
-            style={[
-              styles.optionText,
-              { color: mode === "local" ? activeTextColor : inactiveTextColor },
-            ]}
-          >
-            Local
-          </Text>
-        </Pressable>
-      </View>
+          <View style={styles.toggleInner}>{toggleContent}</View>
+        </GlassWrapper>
+      ) : (
+        <View style={[styles.toggleContainer, { backgroundColor: fallbackBgColor }]}>
+          {toggleContent}
+        </View>
+      )}
 
       {subtitle && (
         <Text style={[styles.subtitle, { color: subtitleColor }]}>{subtitle}</Text>
@@ -118,16 +172,27 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: "row",
-    borderRadius: 8,
-    padding: 2,
+    borderRadius: 10,
+    padding: 3,
+    overflow: "hidden",
+  },
+  toggleInner: {
+    flexDirection: "row",
   },
   option: {
+    borderRadius: 7,
+    overflow: "hidden",
+  },
+  optionGlass: {
+    borderRadius: 7,
+    overflow: "hidden",
+  },
+  optionInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 16,
-    borderRadius: 6,
     gap: 6,
   },
   optionActive: {
@@ -139,7 +204,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   subtitle: {
     fontSize: 12,
