@@ -1,4 +1,10 @@
-import { View, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { View, StyleSheet, Keyboard, Platform, KeyboardEvent } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassContainer } from "expo-glass-effect";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
@@ -8,48 +14,84 @@ import { FloatingPlusButton } from "./FloatingPlusButton";
 
 interface FloatingActionBarProps {
   onCreatePress: () => void;
+  onStartSearch?: (initialQuery: string) => void;
 }
+
+const AnimatedGlassContainer = Animated.createAnimatedComponent(GlassContainer);
 
 /**
  * Floating action bar positioned at the bottom of the screen.
- * Contains a search bar placeholder and a create button.
- * Wraps components in GlassContainer on iOS 26+ for unified glass effect.
+ * Contains a search bar and a create button.
+ * Animates up with keyboard.
  */
-export function FloatingActionBar({ onCreatePress }: FloatingActionBarProps) {
+export function FloatingActionBar({ onCreatePress, onStartSearch }: FloatingActionBarProps) {
   const insets = useSafeAreaInsets();
   const { horizontalPadding, shouldConstrain } = useResponsiveLayout();
   const { isAvailable: isGlassAvailable } = useGlassEffect();
 
-  // Calculate padding - use safe area bottom or minimum of 12
+  // Calculate base padding
   const bottomPadding = Math.max(insets.bottom, 12);
 
-  const containerStyle = [
-    styles.container,
-    {
-      bottom: bottomPadding,
-      paddingHorizontal: shouldConstrain ? horizontalPadding + 16 : 16,
-    },
-  ];
+  // Keyboard animation
+  const keyboardHeight = useSharedValue(0);
+
+  useEffect(() => {
+    const showListener = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (event: KeyboardEvent) => {
+        keyboardHeight.value = withTiming(event.endCoordinates.height, { duration: 250 });
+      }
+    );
+    const hideListener = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        keyboardHeight.value = withTiming(0, { duration: 250 });
+      }
+    );
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, [keyboardHeight]);
+
+  // Animated style for bottom position
+  const animatedStyle = useAnimatedStyle(() => {
+    const keyboardOffset = Platform.OS === "ios" ? keyboardHeight.value : 0;
+    return {
+      bottom: keyboardOffset > 0 ? keyboardOffset + 8 : bottomPadding,
+    };
+  });
 
   const content = (
     <>
-      <FloatingSearchBar />
+      <FloatingSearchBar onStartTyping={onStartSearch} />
       <View style={styles.gap} />
       <FloatingPlusButton onPress={onCreatePress} />
     </>
   );
 
+  const containerStyle = {
+    paddingHorizontal: shouldConstrain ? horizontalPadding + 16 : 16,
+  };
+
   // Use GlassContainer on iOS 26+ to enable glass element interaction
   if (isGlassAvailable) {
     return (
-      <GlassContainer style={containerStyle} spacing={12}>
+      <AnimatedGlassContainer
+        style={[styles.container, containerStyle, animatedStyle]}
+        spacing={12}
+      >
         {content}
-      </GlassContainer>
+      </AnimatedGlassContainer>
     );
   }
 
-  // Fallback to regular View
-  return <View style={containerStyle}>{content}</View>;
+  return (
+    <Animated.View style={[styles.container, containerStyle, animatedStyle]}>
+      {content}
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({

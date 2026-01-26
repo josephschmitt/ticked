@@ -1,17 +1,24 @@
-import { View, Text, useColorScheme, StyleSheet } from "react-native";
+import { useRef, useCallback } from "react";
+import { View, Text, TextInput, Pressable, useColorScheme, StyleSheet } from "react-native";
 import { Search } from "lucide-react-native";
 import { GlassWrapper } from "./GlassWrapper";
 import { useGlassEffect } from "@/hooks/useGlassEffect";
 import { IOS_GRAYS } from "@/constants/colors";
 
+interface FloatingSearchBarProps {
+  /** Callback when user starts typing (navigates to search) */
+  onStartTyping?: (initialQuery: string) => void;
+}
+
 /**
- * Non-functional search bar placeholder with iOS 26-style glass effect.
- * Falls back to BlurView on unsupported platforms.
+ * Search bar with iOS 26-style glass effect.
+ * Tapping focuses the input; typing triggers navigation to search screen.
  */
-export function FloatingSearchBar() {
+export function FloatingSearchBar({ onStartTyping }: FloatingSearchBarProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const { isAvailable: isGlassAvailable } = useGlassEffect();
+  const inputRef = useRef<TextInput>(null);
 
   const iconColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.system;
   const textColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.system;
@@ -20,8 +27,20 @@ export function FloatingSearchBar() {
     ? "rgba(255,255,255,0.05)"
     : "rgba(255,255,255,0.5)";
 
+  const handlePress = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleChangeText = useCallback((text: string) => {
+    if (text.length > 0 && onStartTyping) {
+      // Blur the input before navigating
+      inputRef.current?.blur();
+      onStartTyping(text);
+    }
+  }, [onStartTyping]);
+
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={handlePress}>
       <GlassWrapper
         style={styles.glassView}
         glassStyle="regular"
@@ -32,7 +51,6 @@ export function FloatingSearchBar() {
         <View
           style={[
             styles.innerContainer,
-            // Only show border/background on fallback mode
             !isGlassAvailable && {
               borderColor,
               borderWidth: 0.5,
@@ -41,12 +59,20 @@ export function FloatingSearchBar() {
           ]}
         >
           <Search size={18} color={iconColor} strokeWidth={2} />
-          <Text style={[styles.placeholderText, { color: textColor }]}>
-            Search
-          </Text>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { color: textColor }]}
+            placeholder="Search"
+            placeholderTextColor={textColor}
+            onChangeText={handleChangeText}
+            value=""
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
         </View>
       </GlassWrapper>
-    </View>
+    </Pressable>
   );
 }
 
@@ -69,8 +95,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 24,
   },
-  placeholderText: {
+  input: {
+    flex: 1,
     fontSize: 17,
     marginLeft: 10,
+    paddingVertical: 0,
   },
 });

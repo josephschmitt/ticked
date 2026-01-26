@@ -2,7 +2,6 @@ import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable, u
 import { AlertCircle, CheckCircle2, ChevronRight } from "lucide-react-native";
 import type { TaskGroup as TaskGroupType } from "@/types/task";
 import { TaskGroup } from "./TaskGroup";
-import { FloatingActionBar } from "@/components/ui/FloatingActionBar";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -14,7 +13,6 @@ interface TaskListProps {
   error?: Error | null;
   doneCount?: number;
   onDonePress?: () => void;
-  onCreatePress?: () => void;
 }
 
 export function TaskList({
@@ -25,7 +23,6 @@ export function TaskList({
   error,
   doneCount,
   onDonePress,
-  onCreatePress,
 }: TaskListProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -65,7 +62,7 @@ export function TaskList({
     return (
       <ScrollView
         className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 120 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
@@ -86,47 +83,41 @@ export function TaskList({
   const cardRadius = shouldConstrain ? "rounded-3xl" : "rounded-[32px]";
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
-        contentInsetAdjustmentBehavior="automatic"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
-        }
-      >
-        {groups.map((group) => (
-          <TaskGroup
-            key={group.status.id}
-            group={group}
-            defaultExpanded={group.status.group !== "complete"}
-          />
-        ))}
+    <ScrollView
+      className="flex-1 bg-background-grouped dark:bg-background-dark-grouped"
+      contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+      contentInsetAdjustmentBehavior="automatic"
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
+      }
+    >
+      {groups.map((group) => (
+        <TaskGroup
+          key={group.status.id}
+          group={group}
+          defaultExpanded={group.status.group !== "complete"}
+        />
+      ))}
 
-        {onDonePress && (
-          <View className={`mx-0 py-3 ${cardRadius} bg-background-elevated dark:bg-background-dark-elevated`}>
-            <Pressable
-              onPress={onDonePress}
-              className="flex-row items-center pl-6 pr-7 py-3 min-h-[44px] active:opacity-70"
-            >
-              <CheckCircle2 size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
-              <Text className="flex-1 ml-3 text-[17px] text-label-primary dark:text-label-dark-primary">
-                Done
+      {onDonePress && (
+        <View className={`mx-0 py-3 ${cardRadius} bg-background-elevated dark:bg-background-dark-elevated`}>
+          <Pressable
+            onPress={onDonePress}
+            className="flex-row items-center pl-6 pr-7 py-3 min-h-[44px] active:opacity-70"
+          >
+            <CheckCircle2 size={22} color={BRAND_COLORS.primary} strokeWidth={2} />
+            <Text className="flex-1 ml-3 text-[17px] text-label-primary dark:text-label-dark-primary">
+              Done
+            </Text>
+            {doneCount !== undefined && doneCount > 0 && (
+              <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary mr-2">
+                {doneCount}
               </Text>
-              {doneCount !== undefined && doneCount > 0 && (
-                <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary mr-2">
-                  {doneCount}
-                </Text>
-              )}
-              <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
-            </Pressable>
-          </View>
-        )}
-      </ScrollView>
-
-      {onCreatePress && (
-        <FloatingActionBar onCreatePress={onCreatePress} />
+            )}
+            <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
+          </Pressable>
+        </View>
       )}
-    </View>
+    </ScrollView>
   );
 }

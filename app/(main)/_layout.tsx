@@ -1,9 +1,12 @@
-import { Stack } from "expo-router";
+import { useCallback } from "react";
+import { Stack, useRouter, usePathname } from "expo-router";
 import { View, useColorScheme, Platform } from "react-native";
+import * as Haptics from "expo-haptics";
 import { BRAND_COLORS, IOS_BACKGROUNDS } from "@/constants/colors";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { ConflictBanner } from "@/components/sync/ConflictBanner";
+import { GlobalSearchBar } from "@/components/search/GlobalSearchBar";
 
 // iOS 26+ handles header blur automatically; older versions need explicit blur
 const getIOSVersion = (): number => {
@@ -15,14 +18,24 @@ const isIOS26OrLater = getIOSVersion() >= 26;
 export default function MainLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const router = useRouter();
+  const pathname = usePathname();
   const { shouldConstrain, maxWidth } = useResponsiveLayout();
 
   const headerBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
   const contentBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
 
   // On iOS, headerTransparent is needed for large title to work properly
-  // When transparent, don't set backgroundColor in headerStyle
   const isIOS = Platform.OS === "ios";
+
+  // Determine if we should show the floating action bar
+  // Hide on modals, settings, task detail screens
+  const showFloatingBar = pathname === "/" || pathname === "/search" || pathname === "/done";
+
+  const handleCreatePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/(main)/task/new");
+  }, [router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: contentBg, alignItems: "center" }}>
@@ -40,8 +53,6 @@ export default function MainLayout() {
             headerTintColor: BRAND_COLORS.primary,
             headerShadowVisible: false,
             contentStyle: { backgroundColor: contentBg },
-            // iOS large title requires transparent header for proper collapse behavior
-            // iOS 26+ handles blur automatically; older versions need explicit "regular" blur
             headerTransparent: isIOS,
             headerBlurEffect: isIOS ? (isIOS26OrLater ? undefined : "regular") : undefined,
           }}
@@ -94,7 +105,19 @@ export default function MainLayout() {
               presentation: "modal",
             }}
           />
+          <Stack.Screen
+            name="search"
+            options={{
+              headerShown: false,
+              animation: "fade",
+            }}
+          />
         </Stack>
+
+        {/* Global floating action bar */}
+        {showFloatingBar && (
+          <GlobalSearchBar onCreatePress={handleCreatePress} />
+        )}
       </View>
     </View>
   );
