@@ -4,6 +4,7 @@ import type { TaskGroup as TaskGroupType } from "@/types/task";
 import { TaskGroup } from "./TaskGroup";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { isMacCatalyst } from "@/hooks/usePlatform";
 
 interface TaskListProps {
   groups: TaskGroupType[];
@@ -65,7 +66,9 @@ export function TaskList({
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 120 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
+          isMacCatalyst ? undefined : (
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
+          )
         }
       >
         <CheckCircle2 size={48} color={BRAND_COLORS.primary} strokeWidth={1.5} />
@@ -88,7 +91,9 @@ export function TaskList({
       contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
+        isMacCatalyst ? undefined : (
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={BRAND_COLORS.primary} />
+        )
       }
     >
       {groups.map((group) => (

@@ -1,6 +1,7 @@
 const {
   withXcodeProject,
   withInfoPlist,
+  withEntitlementsPlist,
   withDangerousMod,
 } = require("@expo/config-plugins");
 const fs = require("fs");
@@ -13,7 +14,9 @@ const path = require("path");
  * - Enables Mac Catalyst as a supported destination
  * - Sets "Optimize Interface for Mac" for native Mac controls
  * - Configures the minimum macOS deployment target
+ * - Adds keychain-access-groups entitlement for SecureStore
  * - Modifies Podfile to enable mac_catalyst_enabled
+ * - Sets scheme to use Release build by default
  */
 
 function withMacCatalystProject(config) {
@@ -78,6 +81,19 @@ function withMacCatalystPlist(config) {
 
     // Support multiple windows on Mac
     config.modResults.UIApplicationSupportsMultipleScenes = true;
+
+    return config;
+  });
+}
+
+function withMacCatalystEntitlements(config) {
+  return withEntitlementsPlist(config, async (config) => {
+    // Add keychain access groups for SecureStore to work on Mac Catalyst
+    // The $(AppIdentifierPrefix) is automatically replaced by Xcode with the team ID
+    const bundleId = config.ios?.bundleIdentifier || "com.ticked.app";
+    config.modResults["keychain-access-groups"] = [
+      `$(AppIdentifierPrefix)${bundleId}`,
+    ];
 
     return config;
   });
@@ -152,6 +168,7 @@ function withMacCatalystScheme(config) {
 function withMacCatalyst(config, options = {}) {
   config = withMacCatalystProject(config);
   config = withMacCatalystPlist(config);
+  config = withMacCatalystEntitlements(config);
   config = withMacCatalystPodfile(config);
   config = withMacCatalystScheme(config);
   return config;

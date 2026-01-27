@@ -7,6 +7,7 @@ import { useCompletedTasks } from "@/hooks/queries/useTasks";
 import { DateTaskGroup } from "@/components/tasks/DateTaskGroup";
 import type { DateTaskGroup as DateTaskGroupType } from "@/types/task";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { isMacCatalyst } from "@/hooks/usePlatform";
 
 export default function DoneScreen() {
   const colorScheme = useColorScheme();
@@ -96,7 +97,9 @@ export default function DoneScreen() {
           contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24, paddingBottom: 40 }}
           contentInsetAdjustmentBehavior="automatic"
           refreshControl={
-            <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+            isMacCatalyst ? undefined : (
+              <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+            )
           }
           ListEmptyComponent={
             <View className="items-center">
@@ -124,7 +127,9 @@ export default function DoneScreen() {
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
-          <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+          isMacCatalyst ? undefined : (
+            <RefreshControl refreshing={isUserRefreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+          )
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

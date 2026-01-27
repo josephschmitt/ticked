@@ -16,6 +16,7 @@ import { useDatabases } from "@/hooks/queries/useDatabases";
 import { useConfigStore } from "@/stores/configStore";
 import { DatabaseCard } from "@/components/setup/DatabaseCard";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { isMacCatalyst } from "@/hooks/usePlatform";
 
 export default function DatabasesScreen() {
   const router = useRouter();
@@ -120,7 +121,9 @@ export default function DatabasesScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingTop: 20, paddingBottom: 24 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+          isMacCatalyst ? undefined : (
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND_COLORS.primary} />
+          )
         }
       >
         <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary px-4 mb-4">
