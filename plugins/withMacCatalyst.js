@@ -155,10 +155,10 @@ function withMacCatalystScheme(config) {
       if (fs.existsSync(schemePath)) {
         let schemeContent = fs.readFileSync(schemePath, "utf8");
 
-        // Change LaunchAction buildConfiguration from Debug to Release
+        // Change LaunchAction buildConfiguration from Release to Debug
         schemeContent = schemeContent.replace(
-          /(<LaunchAction[^>]*buildConfiguration\s*=\s*)"Debug"/g,
-          '$1"Release"'
+          /(<LaunchAction[^>]*buildConfiguration\s*=\s*)"Release"/g,
+          '$1"Debug"'
         );
 
         fs.writeFileSync(schemePath, schemeContent);
