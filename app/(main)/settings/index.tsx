@@ -21,6 +21,7 @@ import { useStatuses } from "@/hooks/queries/useTasks";
 import { clearNotionClient } from "@/services/notion/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface SettingsRowProps {
   label: string;
@@ -41,31 +42,42 @@ function SettingsRow({
 }: SettingsRowProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, spacing, minHeight, iconSize } = useMacSizing();
   const chevronColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray3;
 
   return (
     <>
       <Pressable
         onPress={onPress}
-        className="flex-row items-center justify-between py-3 px-4 min-h-[44px] active:opacity-70"
+        className="flex-row items-center justify-between active:opacity-70"
+        style={{
+          paddingVertical: spacing.rowPaddingVertical,
+          paddingHorizontal: spacing.rowPaddingHorizontal,
+          minHeight: minHeight.row,
+        }}
       >
         <Text
-          className={`text-[17px] ${
+          className={
             destructive
               ? "text-ios-red"
               : "text-label-primary dark:text-label-dark-primary"
-          }`}
+          }
+          style={{ fontSize: fontSize.body }}
         >
           {label}
         </Text>
         <View className="flex-row items-center">
           {value && (
-            <Text className="text-[17px] text-label-secondary dark:text-label-dark-secondary mr-2" numberOfLines={1}>
+            <Text
+              className="text-label-secondary dark:text-label-dark-secondary mr-2"
+              style={{ fontSize: fontSize.body }}
+              numberOfLines={1}
+            >
               {value}
             </Text>
           )}
           {showChevron && !destructive && (
-            <ChevronRight size={20} color={chevronColor} strokeWidth={2} />
+            <ChevronRight size={iconSize.medium} color={chevronColor} strokeWidth={2} />
           )}
         </View>
       </Pressable>
@@ -89,10 +101,22 @@ function SettingsToggleRow({
   onValueChange,
   isLast = false,
 }: SettingsToggleRowProps) {
+  const { fontSize, spacing, minHeight } = useMacSizing();
+
   return (
     <>
-      <View className="flex-row items-center justify-between py-2 px-4 min-h-[44px]">
-        <Text className="text-[17px] text-label-primary dark:text-label-dark-primary">
+      <View
+        className="flex-row items-center justify-between"
+        style={{
+          paddingVertical: spacing.rowPaddingVertical * 0.66,
+          paddingHorizontal: spacing.rowPaddingHorizontal,
+          minHeight: minHeight.row,
+        }}
+      >
+        <Text
+          className="text-label-primary dark:text-label-dark-primary"
+          style={{ fontSize: fontSize.body }}
+        >
           {label}
         </Text>
         <Switch

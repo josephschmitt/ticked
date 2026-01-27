@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import type { LucideIcon } from "lucide-react-native";
 import type { DatabaseIcon } from "@/types/database";
 import { IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface RelationBadgeProps {
   name?: string;
@@ -25,19 +26,20 @@ export function RelationBadge({
 }: RelationBadgeProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, iconSize: macIconSize } = useMacSizing();
 
-  const iconSize = size === "small" ? 14 : size === "medium" ? 16 : 22;
-  const emojiSize = size === "small" ? "text-[12px]" : size === "medium" ? "text-[14px]" : "text-[20px]";
-  const textSize = size === "small" ? "text-[15px]" : "text-[13px]";
+  const badgeIconSize = size === "small" ? macIconSize.small * 1.1 : size === "medium" ? macIconSize.medium : macIconSize.large;
+  const emojiFontSize = size === "small" ? fontSize.caption * 0.9 : size === "medium" ? fontSize.caption * 1.1 : fontSize.body * 1.15;
+  const textFontSize = size === "small" ? fontSize.secondary : fontSize.caption;
   const iconColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
   const renderIcon = () => {
     if (!icon) {
-      return <FallbackIcon size={iconSize} color={iconColor} strokeWidth={2} />;
+      return <FallbackIcon size={badgeIconSize} color={iconColor} strokeWidth={2} />;
     }
 
     if (icon.type === "emoji" && icon.emoji) {
-      return <Text className={emojiSize}>{icon.emoji}</Text>;
+      return <Text style={{ fontSize: emojiFontSize }}>{icon.emoji}</Text>;
     }
 
     if (
@@ -45,15 +47,14 @@ export function RelationBadge({
       (icon.external?.url || icon.file?.url)
     ) {
       const imageUrl = icon.external?.url || icon.file?.url;
-      const imageDimension = size === "small" ? 14 : size === "medium" ? 16 : 22;
       const isSvg = imageUrl?.toLowerCase().endsWith(".svg");
 
       return (
         <Image
           source={{ uri: imageUrl }}
           style={{
-            width: imageDimension,
-            height: imageDimension,
+            width: badgeIconSize,
+            height: badgeIconSize,
             borderRadius: 2,
             opacity: isSvg ? 1 : 0.75,
           }}
@@ -64,7 +65,7 @@ export function RelationBadge({
     }
 
     // Fallback for any other case
-    return <FallbackIcon size={iconSize} color={iconColor} strokeWidth={2} />;
+    return <FallbackIcon size={badgeIconSize} color={iconColor} strokeWidth={2} />;
   };
 
   return (
@@ -72,7 +73,8 @@ export function RelationBadge({
       {renderIcon()}
       {name && (
         <Text
-          className={`ml-1 ${textSize} text-label-secondary dark:text-label-dark-secondary`}
+          className="ml-1 text-label-secondary dark:text-label-dark-secondary"
+          style={{ fontSize: textFontSize }}
         >
           {name}
         </Text>

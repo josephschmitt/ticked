@@ -1,6 +1,7 @@
 import { View, Text, useColorScheme } from "react-native";
 import { CalendarCheck, CalendarClock } from "lucide-react-native";
 import { IOS_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 type DateType = "do" | "due";
 type Urgency = "normal" | "approaching" | "overdue";
@@ -76,20 +77,24 @@ function getIconColor(urgency: Urgency, isComplete: boolean, secondaryColor: str
 export function DateBadge({ date, type, isComplete = false, size = "small", approachingDaysThreshold = 2 }: DateBadgeProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, iconSize: macIconSize } = useMacSizing();
 
   const secondaryColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
   const urgency = getDateUrgency(date, approachingDaysThreshold);
   const iconColor = getIconColor(urgency, isComplete, secondaryColor);
 
-  const iconSize = size === "small" ? 12 : 14;
-  const textSize = size === "small" ? "text-[15px]" : "text-[13px]";
+  const badgeIconSize = size === "small" ? macIconSize.small : macIconSize.small * 1.2;
+  const textFontSize = size === "small" ? fontSize.secondary : fontSize.caption;
   const Icon = type === "do" ? CalendarCheck : CalendarClock;
   const displayDate = formatDisplayDate(date);
 
   return (
     <View className="flex-row items-center gap-1">
-      <Icon size={iconSize} color={iconColor} strokeWidth={2} />
-      <Text className={`${textSize} text-label-secondary dark:text-label-dark-secondary`}>
+      <Icon size={badgeIconSize} color={iconColor} strokeWidth={2} />
+      <Text
+        className="text-label-secondary dark:text-label-dark-secondary"
+        style={{ fontSize: textFontSize }}
+      >
         {displayDate}
       </Text>
     </View>

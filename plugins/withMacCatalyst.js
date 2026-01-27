@@ -82,6 +82,10 @@ function withMacCatalystPlist(config) {
     // Support multiple windows on Mac
     config.modResults.UIApplicationSupportsMultipleScenes = true;
 
+    // Hide titlebar background (transparent titlebar, keep traffic lights)
+    // This makes the window chrome blend with the content
+    config.modResults.NSWindowTitleHidden = true;
+
     return config;
   });
 }

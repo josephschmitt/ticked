@@ -2,16 +2,17 @@ import { Platform, Dimensions, useWindowDimensions } from "react-native";
 
 // Platform constants type with Mac Catalyst properties
 interface PlatformConstantsIOS {
-  interfaceIdiom?: "phone" | "pad" | "mac" | "tv" | "carplay";
+  interfaceIdiom?: "phone" | "pad" | "mac" | "tv" | "carplay" | "unknown";
+  isMacCatalyst?: boolean;
 }
 
 /**
- * Check if running on Mac Catalyst with "Optimize for Mac" idiom.
- * This is a static check that doesn't need to be in a hook.
+ * Check if running on Mac Catalyst.
+ * Uses the built-in isMacCatalyst flag from Platform.constants.
  */
 export const isMacCatalyst =
   Platform.OS === "ios" &&
-  (Platform.constants as PlatformConstantsIOS).interfaceIdiom === "mac";
+  (Platform.constants as PlatformConstantsIOS).isMacCatalyst === true;
 
 /**
  * Check if we're on iPad.

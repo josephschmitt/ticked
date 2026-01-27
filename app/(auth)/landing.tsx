@@ -12,6 +12,7 @@ import {
 } from "@/services/auth/oauth";
 import { useAuthStore } from "@/stores/authStore";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 // Required for web browser redirect
 WebBrowser.maybeCompleteAuthSession();
@@ -20,6 +21,7 @@ export default function LandingScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize } = useMacSizing();
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
@@ -121,12 +123,15 @@ export default function LandingScreen() {
           {isLoading && (
             <ActivityIndicator color="white" style={{ marginRight: 8 }} />
           )}
-          <Text className="text-white text-[17px] font-semibold">
+          <Text className="text-white font-semibold" style={{ fontSize: fontSize.body }}>
             {isLoading ? "Connecting..." : "Connect to Notion"}
           </Text>
         </Pressable>
 
-        <Text className="mt-8 text-[13px] text-label-tertiary dark:text-label-dark-tertiary text-center px-8">
+        <Text
+          className="mt-8 text-label-tertiary dark:text-label-dark-tertiary text-center px-8"
+          style={{ fontSize: fontSize.caption }}
+        >
           You'll be redirected to Notion to authorize access to your workspace
         </Text>
       </View>

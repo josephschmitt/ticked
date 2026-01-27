@@ -36,6 +36,7 @@ import {
 } from "@/hooks/mutations/useUpdateTask";
 import type { CreateTaskParams, TaskTypeValue, ProjectValue } from "@/hooks/mutations/useCreateTask";
 import { BRAND_COLORS, IOS_GRAYS, NOTION_COLORS, NotionColor } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 /** Strip protocol (https://, http://) from URL for display */
 const formatDisplayUrl = (url: string) => url.replace(/^https?:\/\//, "");
@@ -68,6 +69,7 @@ export function TaskDetailContent({
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, iconSize } = useMacSizing();
 
   // Determine mode from props
   const mode = modeProp ?? (task ? "edit" : "create");
@@ -620,9 +622,9 @@ export function TaskDetailContent({
           {isToggling ? (
             <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
           ) : isComplete ? (
-            <CheckCircle2 size={28} color={checkboxColor} strokeWidth={2} />
+            <CheckCircle2 size={fontSize.largeTitle} color={checkboxColor} strokeWidth={2} />
           ) : (
-            <Circle size={28} color={checkboxColor} strokeWidth={1.5} />
+            <Circle size={fontSize.largeTitle} color={checkboxColor} strokeWidth={1.5} />
           )}
         </Pressable>
         <TextInput
@@ -636,7 +638,7 @@ export function TaskDetailContent({
           returnKeyType="done"
           blurOnSubmit={true}
           multiline
-          className={`flex-1 ml-2 text-[28px] font-semibold leading-tight ${
+          className={`flex-1 ml-2 font-semibold leading-tight ${
             isComplete
               ? "text-label-secondary dark:text-label-dark-secondary"
               : "text-label-primary dark:text-label-dark-primary"
@@ -644,6 +646,7 @@ export function TaskDetailContent({
           style={{
             padding: 0,
             margin: 0,
+            fontSize: fontSize.largeTitle,
             textDecorationLine: isComplete ? "line-through" : "none",
           }}
         />
@@ -670,7 +673,10 @@ export function TaskDetailContent({
               className="px-2.5 py-1 rounded-full"
               style={{ backgroundColor: statusBgColor }}
             >
-              <Text className="text-[13px] font-medium text-label-primary dark:text-label-dark-primary">
+              <Text
+                className="font-medium text-label-primary dark:text-label-dark-primary"
+                style={{ fontSize: fontSize.caption }}
+              >
                 {displayStatus.name}
               </Text>
             </View>
@@ -689,8 +695,11 @@ export function TaskDetailContent({
               />
             ) : (
               <View className="flex-row items-center gap-1">
-                <Plus size={14} color={secondaryColor} strokeWidth={2} />
-                <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
+                <Plus size={iconSize.small} color={secondaryColor} strokeWidth={2} />
+                <Text
+                  className="text-label-tertiary dark:text-label-dark-tertiary"
+                  style={{ fontSize: fontSize.caption }}
+                >
                   Type
                 </Text>
               </View>
@@ -710,8 +719,11 @@ export function TaskDetailContent({
               />
             ) : (
               <View className="flex-row items-center gap-1">
-                <Plus size={14} color={secondaryColor} strokeWidth={2} />
-                <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
+                <Plus size={iconSize.small} color={secondaryColor} strokeWidth={2} />
+                <Text
+                  className="text-label-tertiary dark:text-label-dark-tertiary"
+                  style={{ fontSize: fontSize.caption }}
+                >
                   Project
                 </Text>
               </View>
@@ -757,21 +769,25 @@ export function TaskDetailContent({
             className="flex-row items-center flex-1 min-w-0 px-1 py-1 active:opacity-70"
           >
             <LinkIcon
-              size={14}
+              size={iconSize.small}
               color={secondaryColor}
               strokeWidth={2}
               style={{ flexShrink: 0 }}
             />
             {displayUrl ? (
               <Text
-                className="text-[13px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+                className="text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+                style={{ fontSize: fontSize.caption }}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
                 {formatDisplayUrl(displayUrl)}
               </Text>
             ) : (
-              <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary ml-1">
+              <Text
+                className="text-label-tertiary dark:text-label-dark-tertiary ml-1"
+                style={{ fontSize: fontSize.caption }}
+              >
                 Add URL
               </Text>
             )}
@@ -791,10 +807,16 @@ export function TaskDetailContent({
       {/* Content area - tap to open in Notion (only in edit mode) */}
       {isCreateMode ? (
         <View className="pb-8 items-center">
-          <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
+          <Text
+            className="text-label-tertiary dark:text-label-dark-tertiary italic"
+            style={{ fontSize: fontSize.secondary }}
+          >
             No content
           </Text>
-          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-2">
+          <Text
+            className="text-label-tertiary dark:text-label-dark-tertiary mt-2"
+            style={{ fontSize: fontSize.caption }}
+          >
             Add content after creating the task
           </Text>
         </View>
@@ -808,7 +830,10 @@ export function TaskDetailContent({
             <NotionContent blocks={blocks} />
           ) : (
             <View className="py-4 items-center">
-              <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
+              <Text
+                className="text-label-tertiary dark:text-label-dark-tertiary italic"
+                style={{ fontSize: fontSize.secondary }}
+              >
                 No content
               </Text>
             </View>
@@ -901,7 +926,10 @@ export function TaskDetailContent({
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         >
           <View className="mx-6 bg-background-elevated dark:bg-background-dark-elevated rounded-xl p-4 w-full max-w-md">
-            <Text className="text-[17px] font-semibold text-label-primary dark:text-label-dark-primary mb-4">
+            <Text
+              className="font-semibold text-label-primary dark:text-label-dark-primary mb-4"
+              style={{ fontSize: fontSize.body }}
+            >
               Edit URL
             </Text>
             <TextInput
@@ -916,14 +944,15 @@ export function TaskDetailContent({
               blurOnSubmit={true}
               onSubmitEditing={handleUrlSubmit}
               autoFocus
-              className="text-[17px] text-label-primary dark:text-label-dark-primary bg-background-grouped dark:bg-background-dark-grouped p-3 rounded-lg"
+              className="text-label-primary dark:text-label-dark-primary bg-background-grouped dark:bg-background-dark-grouped p-3 rounded-lg"
+              style={{ fontSize: fontSize.body }}
             />
             <View className="flex-row justify-end gap-3 mt-4">
               <Pressable
                 onPress={() => setShowUrlEditor(false)}
                 className="px-4 py-2"
               >
-                <Text className="text-[17px]" style={{ color: BRAND_COLORS.primary }}>
+                <Text style={{ fontSize: fontSize.body, color: BRAND_COLORS.primary }}>
                   Cancel
                 </Text>
               </Pressable>
@@ -932,7 +961,7 @@ export function TaskDetailContent({
                 className="px-4 py-2 rounded-lg"
                 style={{ backgroundColor: BRAND_COLORS.primary }}
               >
-                <Text className="text-[17px] font-semibold text-white">
+                <Text className="font-semibold text-white" style={{ fontSize: fontSize.body }}>
                   Save
                 </Text>
               </Pressable>

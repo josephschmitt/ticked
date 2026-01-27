@@ -3,6 +3,7 @@ import { X, Check } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface TaskDetailHeaderProps {
   title: string;
@@ -17,6 +18,7 @@ interface TaskDetailHeaderProps {
 export function TaskDetailHeader({ title, onSave, saveDisabled = true }: TaskDetailHeaderProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, iconSize } = useMacSizing();
 
   const handleDismiss = () => {
     Haptics.selectionAsync();
@@ -42,12 +44,13 @@ export function TaskDetailHeader({ title, onSave, saveDisabled = true }: TaskDet
         accessibilityLabel="Close"
         accessibilityRole="button"
       >
-        <X size={24} color={iconColor} strokeWidth={2} />
+        <X size={iconSize.large} color={iconColor} strokeWidth={2} />
       </Pressable>
 
       {/* Title */}
       <Text
-        className="flex-1 text-center text-[17px] font-semibold text-label-primary dark:text-label-dark-primary"
+        className="flex-1 text-center font-semibold text-label-primary dark:text-label-dark-primary"
+        style={{ fontSize: fontSize.body }}
         numberOfLines={1}
       >
         {title}
@@ -63,7 +66,7 @@ export function TaskDetailHeader({ title, onSave, saveDisabled = true }: TaskDet
         accessibilityState={{ disabled: saveDisabled }}
       >
         <Check
-          size={24}
+          size={iconSize.large}
           color={saveDisabled ? disabledColor : BRAND_COLORS.primary}
           strokeWidth={2}
         />

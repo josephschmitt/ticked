@@ -4,6 +4,8 @@ import * as Haptics from "expo-haptics";
 import { GlassWrapper } from "./GlassWrapper";
 import { useGlassEffect } from "@/hooks/useGlassEffect";
 import { BRAND_COLORS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
+import { useMemo } from "react";
 
 interface FloatingPlusButtonProps {
   onPress: () => void;
@@ -17,6 +19,7 @@ export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const { isAvailable: isGlassAvailable } = useGlassEffect();
+  const { minHeight, iconSize } = useMacSizing();
 
   const borderColor = isDark
     ? "rgba(255,255,255,0.2)"
@@ -27,17 +30,53 @@ export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
     onPress();
   };
 
+  const dynamicStyles = useMemo(() => {
+    const size = minHeight.floatingElement;
+    const radius = size / 2;
+    return StyleSheet.create({
+      container: {
+        width: size,
+        height: size,
+        borderRadius: radius,
+        overflow: "hidden",
+        shadowColor: "#6366f1",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+      pressed: {
+        transform: [{ scale: 0.96 }],
+      },
+      glassView: {
+        width: size,
+        height: size,
+        borderRadius: radius,
+        overflow: "hidden",
+      },
+      innerContainer: {
+        width: size,
+        height: size,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        borderWidth: 0.5,
+        borderRadius: radius,
+        borderColor: "transparent",
+      },
+    });
+  }, [minHeight.floatingElement]);
+
   return (
     <Pressable
       onPress={handlePress}
       style={({ pressed }) => [
-        styles.container,
+        dynamicStyles.container,
         // Use scale transform only for pressed state (opacity breaks glass effect)
-        pressed && styles.pressed,
+        pressed && dynamicStyles.pressed,
       ]}
     >
       <GlassWrapper
-        style={styles.glassView}
+        style={dynamicStyles.glassView}
         glassStyle="clear"
         tintColor={BRAND_COLORS.primary}
         isInteractive={false}
@@ -46,7 +85,7 @@ export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
       >
         <View
           style={[
-            styles.innerContainer,
+            dynamicStyles.innerContainer,
             // Only show border/background on fallback mode
             !isGlassAvailable && {
               borderColor,
@@ -54,43 +93,10 @@ export function FloatingPlusButton({ onPress }: FloatingPlusButtonProps) {
             },
           ]}
         >
-          <Plus size={24} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={iconSize.large} color="#FFFFFF" strokeWidth={2.5} />
         </View>
       </GlassWrapper>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: "hidden",
-    // Shadow for depth
-    shadowColor: "#6366f1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  pressed: {
-    // Avoid opacity < 1 on glass effect, use scale only
-    transform: [{ scale: 0.96 }],
-  },
-  glassView: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: "hidden",
-  },
-  innerContainer: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 0.5,
-    borderRadius: 24,
-    borderColor: "transparent",
-  },
-});

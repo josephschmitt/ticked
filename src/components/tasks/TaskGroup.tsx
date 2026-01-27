@@ -7,6 +7,7 @@ import { TaskRow } from "./TaskRow";
 import { Separator } from "@/components/ui/Separator";
 import { IOS_GRAYS } from "@/constants/colors";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface TaskGroupProps {
   group: TaskGroupType;
@@ -18,6 +19,7 @@ export function TaskGroup({ group, defaultExpanded = true }: TaskGroupProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const { shouldConstrain } = useResponsiveLayout();
+  const { fontSize, iconSize } = useMacSizing();
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -40,7 +42,10 @@ export function TaskGroup({ group, defaultExpanded = true }: TaskGroupProps) {
         accessibilityLabel={`${group.status.name}, ${taskCount} tasks, ${isExpanded ? "expanded" : "collapsed"}`}
         accessibilityHint="Double tap to toggle section"
       >
-        <Text className="text-[22px] font-bold text-label-primary dark:text-label-dark-primary">
+        <Text
+          className="font-bold text-label-primary dark:text-label-dark-primary"
+          style={{ fontSize: fontSize.title }}
+        >
           {group.status.name}{" "}
           <Text className="font-normal text-label-secondary dark:text-label-dark-secondary">
             {taskCount}
@@ -48,9 +53,9 @@ export function TaskGroup({ group, defaultExpanded = true }: TaskGroupProps) {
         </Text>
 
         {isExpanded ? (
-          <ChevronDown size={22} color={chevronColor} strokeWidth={2.5} />
+          <ChevronDown size={iconSize.large} color={chevronColor} strokeWidth={2.5} />
         ) : (
-          <ChevronRight size={22} color={chevronColor} strokeWidth={2.5} />
+          <ChevronRight size={iconSize.large} color={chevronColor} strokeWidth={2.5} />
         )}
       </Pressable>
 
@@ -59,7 +64,10 @@ export function TaskGroup({ group, defaultExpanded = true }: TaskGroupProps) {
         <View className={`mx-0 py-3 ${cardRadius} bg-background-elevated dark:bg-background-dark-elevated`}>
           {group.tasks.length === 0 ? (
             <View className="py-4 items-center">
-              <Text className="text-label-tertiary dark:text-label-dark-tertiary text-[15px]">
+              <Text
+                className="text-label-tertiary dark:text-label-dark-tertiary"
+                style={{ fontSize: fontSize.secondary }}
+              >
                 No tasks
               </Text>
             </View>

@@ -9,6 +9,7 @@ import { useConfigStore } from "@/stores/configStore";
 import { useStatuses } from "@/hooks/queries/useTasks";
 import { useUpdateTaskStatus, useUpdateTaskCheckbox } from "@/hooks/mutations/useUpdateTask";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 /** Strip protocol (https://, http://) from URL for display */
 const formatDisplayUrl = (url: string) => url.replace(/^https?:\/\//, "");
@@ -26,6 +27,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
   const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
   const defaultStatusId = useConfigStore((state) => state.defaultStatusId);
+  const { fontSize, spacing, minHeight, iconSize } = useMacSizing();
 
   // Get statuses and mutations
   const { data: statuses } = useStatuses();
@@ -158,7 +160,14 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       <Pressable
         onPress={handleCheckboxPress}
         disabled={isToggling}
-        className="flex-row pl-6 pt-3 pb-3 pr-2 min-h-[44px] items-center gap-2"
+        className="flex-row items-center gap-2"
+        style={{
+          paddingLeft: spacing.rowPaddingHorizontal * 1.5,
+          paddingTop: spacing.rowPaddingVertical,
+          paddingBottom: spacing.rowPaddingVertical,
+          paddingRight: spacing.rowPaddingHorizontal * 0.5,
+          minHeight: minHeight.row,
+        }}
         accessibilityLabel={isComplete ? "Mark incomplete" : "Mark complete"}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isComplete }}
@@ -167,9 +176,9 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
           {isToggling ? (
             <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
           ) : isComplete ? (
-            <CheckCircle2 size={22} color={checkboxColor} strokeWidth={2} />
+            <CheckCircle2 size={iconSize.large} color={checkboxColor} strokeWidth={2} />
           ) : (
-            <Circle size={22} color={checkboxColor} strokeWidth={1.5} />
+            <Circle size={iconSize.large} color={checkboxColor} strokeWidth={1.5} />
           )}
         </View>
         {showTaskTypeInline && task.taskType && task.taskTypeIcon && (
@@ -183,16 +192,23 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       <Pressable
         onPress={handleContentPress}
         onLongPress={handleLongPress}
-        className="flex-1 flex-row items-start py-3 pr-7 min-h-[44px] active:opacity-70"
+        className="flex-1 flex-row items-start active:opacity-70"
+        style={{
+          paddingTop: spacing.rowPaddingVertical,
+          paddingBottom: spacing.rowPaddingVertical,
+          paddingRight: spacing.rowPaddingHorizontal * 1.75,
+          minHeight: minHeight.row,
+        }}
         accessibilityHint="Tap to view details, long press to open in Notion"
       >
         <View className="flex-1">
           <Text
-            className={`text-[17px] leading-tight ${
+            className={`leading-tight ${
               isComplete
                 ? "text-label-secondary dark:text-label-dark-secondary line-through"
                 : "text-label-primary dark:text-label-dark-primary"
             }`}
+            style={{ fontSize: fontSize.body }}
             numberOfLines={2}
             accessible={false}
           >
@@ -216,13 +232,14 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
               {task.url && (
                 <View className="flex-row items-center flex-1 min-w-0">
                   <Link
-                    size={12}
+                    size={iconSize.small}
                     color={linkColor}
                     strokeWidth={2}
                     style={{ flexShrink: 0 }}
                   />
                   <Text
-                    className="text-[15px] text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+                    className="text-label-secondary dark:text-label-dark-secondary ml-1 flex-shrink"
+                    style={{ fontSize: fontSize.secondary }}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >

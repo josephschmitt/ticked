@@ -2,6 +2,7 @@ import { View, Text, Pressable, Image, useColorScheme } from "react-native";
 import { Check, Database } from "lucide-react-native";
 import type { NotionDatabase } from "@/types/database";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface DatabaseCardProps {
   database: NotionDatabase;
@@ -18,6 +19,7 @@ export function DatabaseCard({
 }: DatabaseCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { fontSize, spacing, minHeight, iconSize } = useMacSizing();
 
   const iconBgColor = isDark ? IOS_GRAYS.gray3 : IOS_GRAYS.gray5;
 
@@ -25,7 +27,12 @@ export function DatabaseCard({
     <>
       <Pressable
         onPress={onSelect}
-        className="flex-row items-center px-4 py-3 min-h-[44px] active:opacity-70"
+        className="flex-row items-center active:opacity-70"
+        style={{
+          paddingHorizontal: spacing.rowPaddingHorizontal,
+          paddingVertical: spacing.rowPaddingVertical,
+          minHeight: minHeight.row,
+        }}
       >
         {/* Icon */}
         <View
@@ -43,21 +50,23 @@ export function DatabaseCard({
               className="w-6 h-6 rounded"
             />
           ) : (
-            <Database size={20} color={isDark ? IOS_GRAYS.gray6 : IOS_GRAYS.system} strokeWidth={1.5} />
+            <Database size={iconSize.medium} color={isDark ? IOS_GRAYS.gray6 : IOS_GRAYS.system} strokeWidth={1.5} />
           )}
         </View>
 
         {/* Content */}
         <View className="flex-1">
           <Text
-            className="text-[17px] text-label-primary dark:text-label-dark-primary"
+            className="text-label-primary dark:text-label-dark-primary"
+            style={{ fontSize: fontSize.body }}
             numberOfLines={1}
           >
             {database.title}
           </Text>
           {database.description && (
             <Text
-              className="text-[15px] text-label-secondary dark:text-label-dark-secondary mt-0.5"
+              className="text-label-secondary dark:text-label-dark-secondary mt-0.5"
+              style={{ fontSize: fontSize.secondary }}
               numberOfLines={2}
             >
               {database.description}
@@ -67,7 +76,7 @@ export function DatabaseCard({
 
         {/* Selected indicator */}
         {isSelected && (
-          <Check size={22} color={BRAND_COLORS.primary} strokeWidth={3} />
+          <Check size={iconSize.large} color={BRAND_COLORS.primary} strokeWidth={3} />
         )}
       </Pressable>
 

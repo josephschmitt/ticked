@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, View, Text, Platform } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Settings } from "lucide-react-native";
@@ -7,6 +7,8 @@ import { useGroupedTasks, useCompletedTasks } from "@/hooks/queries/useTasks";
 import { useConfigStore } from "@/stores/configStore";
 import { TaskList } from "@/components/tasks/TaskList";
 import { BRAND_COLORS } from "@/constants/colors";
+import { useMacSizing } from "@/hooks/useMacSizing";
+import { isMacCatalyst } from "@/hooks/usePlatform";
 
 export default function TaskListScreen() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, StyleSheet, Keyboard, Platform, KeyboardEvent } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -11,6 +11,7 @@ import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useGlassEffect } from "@/hooks/useGlassEffect";
 import { FloatingSearchBar } from "./FloatingSearchBar";
 import { FloatingPlusButton } from "./FloatingPlusButton";
+import { useMacSizing } from "@/hooks/useMacSizing";
 
 interface FloatingActionBarProps {
   onCreatePress: () => void;
@@ -28,9 +29,24 @@ export function FloatingActionBar({ onCreatePress, onStartSearch }: FloatingActi
   const insets = useSafeAreaInsets();
   const { horizontalPadding, shouldConstrain } = useResponsiveLayout();
   const { isAvailable: isGlassAvailable } = useGlassEffect();
+  const { minHeight } = useMacSizing();
 
   // Calculate base padding
   const bottomPadding = Math.max(insets.bottom, 12);
+
+  const dynamicStyles = useMemo(() => StyleSheet.create({
+    container: {
+      position: "absolute" as const,
+      left: 0,
+      right: 0,
+      height: minHeight.floatingElement,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+    },
+    gap: {
+      width: 12,
+    },
+  }), [minHeight.floatingElement]);
 
   // Keyboard animation
   const keyboardHeight = useSharedValue(0);
@@ -66,7 +82,7 @@ export function FloatingActionBar({ onCreatePress, onStartSearch }: FloatingActi
   const content = (
     <>
       <FloatingSearchBar onStartTyping={onStartSearch} />
-      <View style={styles.gap} />
+      <View style={dynamicStyles.gap} />
       <FloatingPlusButton onPress={onCreatePress} />
     </>
   );
@@ -79,7 +95,7 @@ export function FloatingActionBar({ onCreatePress, onStartSearch }: FloatingActi
   if (isGlassAvailable) {
     return (
       <AnimatedGlassContainer
-        style={[styles.container, containerStyle, animatedStyle]}
+        style={[dynamicStyles.container, containerStyle, animatedStyle]}
         spacing={12}
       >
         {content}
@@ -88,22 +104,9 @@ export function FloatingActionBar({ onCreatePress, onStartSearch }: FloatingActi
   }
 
   return (
-    <Animated.View style={[styles.container, containerStyle, animatedStyle]}>
+    <Animated.View style={[dynamicStyles.container, containerStyle, animatedStyle]}>
       {content}
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  gap: {
-    width: 12,
-  },
-});
