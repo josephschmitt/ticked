@@ -14,7 +14,10 @@ export type SupportedBlockType =
   | "divider"
   | "quote"
   | "code"
-  | "callout";
+  | "callout"
+  | "toggle"
+  | "image"
+  | "bookmark";
 
 export interface RichTextItem {
   type: "text" | "mention" | "equation";
@@ -90,6 +93,25 @@ export interface NotionBlock {
     icon: { type: string; emoji?: string } | null;
     color: string;
   };
+  toggle?: {
+    rich_text: RichTextItem[];
+    color: string;
+  };
+  image?: {
+    type: "file" | "external";
+    file?: {
+      url: string;
+      expiry_time: string;
+    };
+    external?: {
+      url: string;
+    };
+    caption: RichTextItem[];
+  };
+  bookmark?: {
+    url: string;
+    caption: RichTextItem[];
+  };
 }
 
 interface BlocksResponse {
@@ -99,17 +121,17 @@ interface BlocksResponse {
 }
 
 /**
- * Fetch all blocks (content) from a Notion page.
+ * Fetch all blocks (content) from a Notion page or block.
  * Returns an array of block objects.
  */
-export async function getPageContent(pageId: string): Promise<NotionBlock[]> {
+export async function getPageContent(blockId: string): Promise<NotionBlock[]> {
   const client = getNotionClient();
   const blocks: NotionBlock[] = [];
   let cursor: string | undefined;
 
   do {
     const response = await client.blocks.children.list({
-      block_id: pageId,
+      block_id: blockId,
       start_cursor: cursor,
       page_size: 100,
     }) as unknown as BlocksResponse;
@@ -119,6 +141,14 @@ export async function getPageContent(pageId: string): Promise<NotionBlock[]> {
   } while (cursor);
 
   return blocks;
+}
+
+/**
+ * Fetch children of a specific block (used for toggle blocks, etc.).
+ * This is an alias for getPageContent as Notion uses the same API.
+ */
+export async function getBlockChildren(blockId: string): Promise<NotionBlock[]> {
+  return getPageContent(blockId);
 }
 
 /**
@@ -159,6 +189,12 @@ export function getContentPreview(blocks: NotionBlock[], maxLength: number = 100
         break;
       case "quote":
         richText = block.quote?.rich_text;
+        break;
+      case "toggle":
+        richText = block.toggle?.rich_text;
+        break;
+      case "callout":
+        richText = block.callout?.rich_text;
         break;
     }
 

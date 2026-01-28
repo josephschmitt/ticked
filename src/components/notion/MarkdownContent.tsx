@@ -1,48 +1,27 @@
-import { useColorScheme, Text } from "react-native";
-import Markdown, { RenderRules } from "react-native-markdown-display";
+import { useCallback } from "react";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
-import { blocksToMarkdown } from "@/services/notion/markdown";
-import { getMarkdownStyles } from "./markdownStyles";
+import { getBlockChildren } from "@/services/notion/operations/getPageContent";
+import { BlockListRenderer } from "./blocks";
 
 interface MarkdownContentProps {
   blocks: NotionBlock[];
 }
 
 /**
- * Custom render rules for handling HTML tags like <u> for underline
- */
-const customRules: RenderRules = {
-  // Handle HTML underline tags
-  htmlInline: (node, children, parent, styles) => {
-    // Check if this is a <u> tag
-    const content = node.content;
-    if (content && typeof content === "string") {
-      const underlineMatch = content.match(/<u>(.*?)<\/u>/);
-      if (underlineMatch) {
-        return (
-          <Text key={node.key} style={{ textDecorationLine: "underline" }}>
-            {underlineMatch[1]}
-          </Text>
-        );
-      }
-    }
-    return null;
-  },
-};
-
-/**
- * Renders Notion blocks as markdown content.
- * Converts blocks to markdown format, then renders with styled markdown display.
+ * Renders Notion blocks as native React Native components.
+ * Uses the block registry for consistent, extensible rendering with
+ * support for toggle blocks, images, bookmarks, and more.
  */
 export function MarkdownContent({ blocks }: MarkdownContentProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = getMarkdownStyles(isDark);
-  const markdown = blocksToMarkdown(blocks);
+  // Callback for fetching children of blocks (used by toggle blocks)
+  const handleFetchChildren = useCallback(async (blockId: string): Promise<NotionBlock[]> => {
+    return getBlockChildren(blockId);
+  }, []);
 
   return (
-    <Markdown style={styles} rules={customRules}>
-      {markdown}
-    </Markdown>
+    <BlockListRenderer
+      blocks={blocks}
+      onFetchChildren={handleFetchChildren}
+    />
   );
 }
