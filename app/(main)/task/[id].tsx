@@ -74,7 +74,7 @@ export default function TaskDetailScreen() {
 
   return (
     <ScrollView
-      style={{ backgroundColor: elevatedBg }}
+      style={{ backgroundColor: groupedBg }}
       contentContainerStyle={{ paddingBottom: 40 }}
       onLayout={handleLayout}
       scrollEnabled={isFullScreen}
@@ -82,12 +82,14 @@ export default function TaskDetailScreen() {
       nestedScrollEnabled={true}
       bounces={isFullScreen}
     >
-      {/* Main content card with rounded bottom corners matching modal */}
+      {/* Main content card - extra padding/margin at top for overscroll */}
       <View
         style={{
           backgroundColor: elevatedBg,
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
+          paddingTop: screenHeight / 2,
+          marginTop: -screenHeight / 2,
         }}
       >
         <TaskDetailContent
@@ -99,15 +101,8 @@ export default function TaskDetailScreen() {
         />
       </View>
 
-      {/* Timestamps outside the content card - extra padding for overscroll, negative margin to offset */}
-      <View
-        className="px-6 pt-4"
-        style={{
-          backgroundColor: groupedBg,
-          paddingBottom: screenHeight / 2,
-          marginBottom: -screenHeight / 2,
-        }}
-      >
+      {/* Timestamps outside the content card */}
+      <View className="px-6 pt-4">
         {task.creationDate && (
           <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
             Created {formatTimestamp(task.creationDate)}
