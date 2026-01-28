@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorScheme } from "react-native";
+import { View, useColorScheme } from "react-native";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import type { BlockProps, BlockContext, BlockComponent } from "./types";
 
@@ -137,7 +137,7 @@ export function BlockListRenderer({ blocks, onFetchChildren }: BlockListRenderer
     onFetchChildren,
   };
 
-  return <>{renderBlockList(blocks, context)}</>;
+  return <View>{renderBlockList(blocks, context)}</View>;
 }
 
 /**

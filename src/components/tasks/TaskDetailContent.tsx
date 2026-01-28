@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  ScrollView,
 } from "react-native";
-import { Circle, CheckCircle2, Link as LinkIcon, FolderOpen, Tag, Plus } from "lucide-react-native";
+import { Circle, CheckCircle2, Link as LinkIcon, FolderOpen, Tag, Plus, ExternalLink } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import type { Task, TaskStatus } from "@/types/task";
 import type { DatabaseIcon } from "@/types/database";
 import type { NotionBlock } from "@/services/notion/operations/getPageContent";
-import { MarkdownContent } from "@/components/notion/MarkdownContent";
+import { NotionContent } from "@/components/notion/NotionContent";
 import { RelationBadge } from "@/components/ui/RelationBadge";
 import { EditableDateBadge } from "@/components/tasks/EditableDateBadge";
 import { StatusPicker } from "@/components/tasks/StatusPicker";
@@ -49,6 +50,24 @@ interface TaskDetailContentProps {
   mode?: "edit" | "create";
   initialStatus?: TaskStatus | null;
   onCreateTask?: (params: CreateTaskParams) => void;
+  // Timestamps to show when in full screen
+  timestamps?: {
+    creationDate?: string;
+    lastEditedTime: string;
+    completedDate?: string;
+  };
+}
+
+// Format date for timestamp display
+function formatTimestamp(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /**
@@ -64,6 +83,7 @@ export function TaskDetailContent({
   mode: modeProp,
   initialStatus,
   onCreateTask,
+  timestamps,
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -609,7 +629,7 @@ export function TaskDetailContent({
 
   return (
     <View className="px-6 pt-8">
-      {/* Title with checkbox */}
+      {/* Title with checkbox and edit button */}
       <View className="flex-row items-start mb-4">
         <Pressable
           onPress={handleCheckboxPress}
@@ -646,6 +666,18 @@ export function TaskDetailContent({
             textDecorationLine: isComplete ? "line-through" : "none",
           }}
         />
+        {/* Edit in Notion button */}
+        {task?.notionUrl && (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Linking.openURL(task.notionUrl);
+            }}
+            className="ml-2 p-2 active:opacity-70"
+          >
+            <ExternalLink size={20} color={secondaryColor} strokeWidth={2} />
+          </Pressable>
+        )}
       </View>
 
       {/* Metadata row - Status, Task Type, Project */}
@@ -793,7 +825,7 @@ export function TaskDetailContent({
             </View>
           ) : blocks && blocks.length > 0 ? (
             <>
-              <MarkdownContent blocks={blocks} />
+              <NotionContent blocks={blocks} />
               <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-4 text-center">
                 Tap to edit in Notion
               </Text>
@@ -809,6 +841,25 @@ export function TaskDetailContent({
             </View>
           )}
         </Pressable>
+      )}
+
+      {/* Timestamps when in full screen */}
+      {isFullScreen && timestamps && (
+        <View className="mt-8 pt-4 border-t border-separator-light dark:border-separator-dark">
+          {timestamps.creationDate && (
+            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
+              Created {formatTimestamp(timestamps.creationDate)}
+            </Text>
+          )}
+          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
+            Updated {formatTimestamp(timestamps.lastEditedTime)}
+          </Text>
+          {timestamps.completedDate && (
+            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
+              Completed {formatTimestamp(timestamps.completedDate)}
+            </Text>
+          )}
+        </View>
       )}
 
       {/* Status Picker */}

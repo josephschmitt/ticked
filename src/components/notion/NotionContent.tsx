@@ -3,7 +3,7 @@ import type { NotionBlock } from "@/services/notion/operations/getPageContent";
 import { getBlockChildren } from "@/services/notion/operations/getPageContent";
 import { BlockListRenderer } from "./blocks";
 
-interface MarkdownContentProps {
+interface NotionContentProps {
   blocks: NotionBlock[];
 }
 
@@ -12,7 +12,7 @@ interface MarkdownContentProps {
  * Uses the block registry for consistent, extensible rendering with
  * support for toggle blocks, images, bookmarks, and more.
  */
-export function MarkdownContent({ blocks }: MarkdownContentProps) {
+export function NotionContent({ blocks }: NotionContentProps) {
   // Callback for fetching children of blocks (used by toggle blocks)
   const handleFetchChildren = useCallback(async (blockId: string): Promise<NotionBlock[]> => {
     return getBlockChildren(blockId);
