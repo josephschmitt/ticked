@@ -799,29 +799,42 @@ export function TaskDetailContent({
           </Text>
         </View>
       ) : (
-        <Pressable onPress={handleContentPress} className="pb-8 active:opacity-70">
+        <View className="pb-8">
           {isLoadingContent ? (
             <View className="py-8 items-center">
               <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
             </View>
           ) : blocks && blocks.length > 0 ? (
-            <>
-              <NotionContent blocks={blocks} />
-              <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-4 text-center">
-                Tap to edit in Notion
-              </Text>
-            </>
+            <NotionContent blocks={blocks} />
           ) : (
             <View className="py-4 items-center">
               <Text className="text-[15px] text-label-tertiary dark:text-label-dark-tertiary italic">
                 No content
               </Text>
-              <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mt-2">
-                Tap to add content in Notion
-              </Text>
             </View>
           )}
-        </Pressable>
+
+          {/* Edit in Notion button */}
+          {task?.notionUrl && (
+            <View className="items-center mt-6">
+              <Pressable
+                onPress={handleContentPress}
+                className="px-4 py-2 rounded active:opacity-70"
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(235,235,245,0.2)" : "rgba(60,60,67,0.2)",
+                }}
+              >
+                <Text
+                  className="text-[11px] font-semibold tracking-wide"
+                  style={{ color: isDark ? "rgba(235,235,245,0.4)" : "rgba(60,60,67,0.4)" }}
+                >
+                  EDIT IN NOTION
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
       )}
 
       {/* Status Picker */}
