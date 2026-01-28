@@ -74,7 +74,7 @@ export default function TaskDetailScreen() {
 
   return (
     <ScrollView
-      style={{ backgroundColor: groupedBg }}
+      style={{ backgroundColor: elevatedBg }}
       contentContainerStyle={{ paddingBottom: 40 }}
       onLayout={handleLayout}
       scrollEnabled={isFullScreen}
@@ -99,8 +99,15 @@ export default function TaskDetailScreen() {
         />
       </View>
 
-      {/* Timestamps outside the content card */}
-      <View className="px-6 pt-4">
+      {/* Timestamps outside the content card - extra padding for overscroll, negative margin to offset */}
+      <View
+        className="px-6 pt-4"
+        style={{
+          backgroundColor: groupedBg,
+          paddingBottom: screenHeight / 2,
+          marginBottom: -screenHeight / 2,
+        }}
+      >
         {task.creationDate && (
           <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
             Created {formatTimestamp(task.creationDate)}
