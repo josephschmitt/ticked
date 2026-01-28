@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from "react";
-import { View, Text, useColorScheme, useWindowDimensions, ActivityIndicator, ScrollView } from "react-native";
+import { View, useColorScheme, useWindowDimensions, ActivityIndicator, ScrollView } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTask } from "@/hooks/queries/useTask";
 import { usePageContent } from "@/hooks/queries/usePageContent";
@@ -8,18 +8,6 @@ import { IOS_BACKGROUNDS, BRAND_COLORS } from "@/constants/colors";
 
 // Threshold for considering the sheet "full screen" (percentage of screen height)
 const FULL_SCREEN_THRESHOLD = 0.7;
-
-// Format date for timestamp display
-function formatTimestamp(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,7 +70,6 @@ export default function TaskDetailScreen() {
       nestedScrollEnabled={true}
       bounces={isFullScreen}
     >
-      {/* Task metadata and content */}
       <TaskDetailContent
         mode="edit"
         task={task}
@@ -95,26 +82,6 @@ export default function TaskDetailScreen() {
           completedDate: task.status.group === "complete" ? task.completedDate : undefined,
         }}
       />
-
-      {/* Timestamps at bottom */}
-      <View
-        className="px-6 py-4 mt-4"
-        style={{ backgroundColor: groupedBg }}
-      >
-        {task.creationDate && (
-          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
-            Created {formatTimestamp(task.creationDate)}
-          </Text>
-        )}
-        <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
-          Updated {formatTimestamp(task.lastEditedTime)}
-        </Text>
-        {task.status.group === "complete" && task.completedDate && (
-          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
-            Completed {formatTimestamp(task.completedDate)}
-          </Text>
-        )}
-      </View>
     </ScrollView>
   );
 }

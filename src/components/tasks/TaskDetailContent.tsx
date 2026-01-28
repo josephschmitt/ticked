@@ -843,8 +843,8 @@ export function TaskDetailContent({
         </Pressable>
       )}
 
-      {/* Timestamps when in full screen */}
-      {isFullScreen && timestamps && (
+      {/* Timestamps */}
+      {timestamps && (
         <View className="mt-8 pt-4 border-t border-separator-light dark:border-separator-dark">
           {timestamps.creationDate && (
             <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
