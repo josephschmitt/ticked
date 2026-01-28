@@ -99,9 +99,18 @@ function renderBlockList(
       numberedListIndex = 0;
     }
 
+    // Create a renderChildren function for this block's context
+    const childContext: BlockContext = {
+      ...context,
+      depth: context.depth + 1,
+    };
+    const renderChildren = (children: NotionBlock[]) =>
+      renderBlockList(children, childContext);
+
     const blockContext: BlockContext = {
       ...context,
       index: block.type === "numbered_list_item" ? numberedListIndex - 1 : 0,
+      renderChildren,
     };
 
     return renderBlock(block, blockContext, renderBlockList);

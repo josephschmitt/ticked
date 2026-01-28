@@ -112,6 +112,8 @@ export interface NotionBlock {
     url: string;
     caption: RichTextItem[];
   };
+  /** Pre-fetched children for nested blocks (lists, etc.) */
+  children?: NotionBlock[];
 }
 
 interface BlocksResponse {
@@ -149,6 +151,64 @@ export async function getPageContent(blockId: string): Promise<NotionBlock[]> {
  */
 export async function getBlockChildren(blockId: string): Promise<NotionBlock[]> {
   return getPageContent(blockId);
+}
+
+/** Block types that can have nested children we want to pre-fetch */
+const NESTABLE_BLOCK_TYPES = [
+  "bulleted_list_item",
+  "numbered_list_item",
+  "to_do",
+] as const;
+
+/**
+ * Check if a block type supports nested children that should be pre-fetched.
+ * Note: Toggle blocks are excluded as they use lazy loading.
+ */
+function isNestableBlockType(type: string): boolean {
+  return NESTABLE_BLOCK_TYPES.includes(type as typeof NESTABLE_BLOCK_TYPES[number]);
+}
+
+/**
+ * Fetch page content with nested children pre-fetched up to a specified depth.
+ * This recursively fetches children for list items (bulleted, numbered, to-do)
+ * to support indented lists without additional API calls during rendering.
+ *
+ * @param blockId - The page or block ID to fetch content from
+ * @param maxDepth - Maximum depth to fetch children (default: 3)
+ * @returns Array of blocks with children attached
+ */
+export async function getPageContentWithChildren(
+  blockId: string,
+  maxDepth: number = 3
+): Promise<NotionBlock[]> {
+  const blocks = await getPageContent(blockId);
+
+  if (maxDepth <= 0) {
+    return blocks;
+  }
+
+  // Find blocks that need children fetched (list items with has_children)
+  const blocksNeedingChildren = blocks.filter(
+    (block) => isNestableBlockType(block.type) && block.has_children
+  );
+
+  if (blocksNeedingChildren.length === 0) {
+    return blocks;
+  }
+
+  // Fetch all children in parallel for performance
+  const childrenResults = await Promise.all(
+    blocksNeedingChildren.map((block) =>
+      getPageContentWithChildren(block.id, maxDepth - 1)
+    )
+  );
+
+  // Attach children to their parent blocks
+  blocksNeedingChildren.forEach((block, index) => {
+    block.children = childrenResults[index];
+  });
+
+  return blocks;
 }
 
 /**

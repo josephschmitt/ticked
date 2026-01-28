@@ -1,3 +1,4 @@
+import type React from "react";
 import type { NotionBlock, RichTextItem } from "@/services/notion/operations/getPageContent";
 
 /**
@@ -10,8 +11,10 @@ export interface BlockContext {
   index: number;
   /** Whether dark mode is active */
   isDark: boolean;
-  /** Callback to fetch children for blocks with has_children */
+  /** Callback to fetch children for blocks with has_children (lazy loading) */
   onFetchChildren?: (blockId: string) => Promise<NotionBlock[]>;
+  /** Callback to render pre-fetched children blocks */
+  renderChildren?: (children: NotionBlock[]) => React.ReactNode;
 }
 
 /**
