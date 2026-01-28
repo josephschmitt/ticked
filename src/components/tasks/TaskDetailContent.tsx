@@ -50,24 +50,6 @@ interface TaskDetailContentProps {
   mode?: "edit" | "create";
   initialStatus?: TaskStatus | null;
   onCreateTask?: (params: CreateTaskParams) => void;
-  // Timestamps to show when in full screen
-  timestamps?: {
-    creationDate?: string;
-    lastEditedTime: string;
-    completedDate?: string;
-  };
-}
-
-// Format date for timestamp display
-function formatTimestamp(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 /**
@@ -83,7 +65,6 @@ export function TaskDetailContent({
   mode: modeProp,
   initialStatus,
   onCreateTask,
-  timestamps,
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -841,25 +822,6 @@ export function TaskDetailContent({
             </View>
           )}
         </Pressable>
-      )}
-
-      {/* Timestamps */}
-      {timestamps && (
-        <View className="mt-8 pt-4 border-t border-separator-light dark:border-separator-dark">
-          {timestamps.creationDate && (
-            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
-              Created {formatTimestamp(timestamps.creationDate)}
-            </Text>
-          )}
-          <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary mb-1">
-            Updated {formatTimestamp(timestamps.lastEditedTime)}
-          </Text>
-          {timestamps.completedDate && (
-            <Text className="text-[13px] text-label-tertiary dark:text-label-dark-tertiary">
-              Completed {formatTimestamp(timestamps.completedDate)}
-            </Text>
-          )}
-        </View>
       )}
 
       {/* Status Picker */}
