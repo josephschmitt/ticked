@@ -315,27 +315,38 @@ export async function getTasks(
 ): Promise<Task[]> {
   const client = getNotionClient();
 
-  // Use the data sources API to query pages
-  const response = (await (client as unknown as {
-    dataSources: {
-      query: (args: { data_source_id: string; page_size?: number; sorts?: Array<{ timestamp: string; direction: string }> }) => Promise<QueryResponse>;
+  // Fetch ALL pages, not just the first 100
+  const allResults: PageResult[] = [];
+  let hasMore = true;
+  let cursor: string | null = null;
+
+  while (hasMore) {
+    const queryArgs: any = {
+      data_source_id: dataSourceId,
+      page_size: 100,
+      // No sorting - maintain Notion's manual order
     };
-  }).dataSources.query({
-    data_source_id: dataSourceId,
-    page_size: 100,
-    sorts: [
-      {
-        timestamp: "last_edited_time",
-        direction: "descending",
-      },
-    ],
-  })) as QueryResponse;
+
+    if (cursor) {
+      queryArgs.start_cursor = cursor;
+    }
+
+    const response = (await (client as unknown as {
+      dataSources: {
+        query: (args: typeof queryArgs) => Promise<QueryResponse>;
+      };
+    }).dataSources.query(queryArgs)) as QueryResponse;
+
+    allResults.push(...response.results);
+    hasMore = response.has_more;
+    cursor = response.next_cursor;
+  }
 
   // First pass: collect all relation IDs we need to resolve
   const relationIds = new Set<string>();
   const relationPropertyIds = [fieldMapping.taskType, fieldMapping.project].filter(Boolean) as string[];
 
-  for (const page of response.results) {
+  for (const page of allResults) {
     for (const prop of Object.values(page.properties)) {
       if (prop.type === "relation" && prop.relation && relationPropertyIds.includes(prop.id || "")) {
         for (const rel of prop.relation) {
@@ -353,7 +364,7 @@ export async function getTasks(
   // Second pass: build tasks with resolved relation info
   const tasks: Task[] = [];
 
-  for (const page of response.results) {
+  for (const page of allResults) {
     // Build property map by ID for quick lookup
     const propertyMap = new Map<string, PropertyValue>();
     for (const [_name, prop] of Object.entries(page.properties)) {
@@ -388,16 +399,11 @@ export async function getTasksPaginated(
     data_source_id: string;
     page_size: number;
     start_cursor?: string;
-    sorts: Array<{ timestamp: string; direction: string }>;
+    sorts?: Array<{ timestamp: string; direction: string }>;
   } = {
     data_source_id: dataSourceId,
     page_size: pageSize,
-    sorts: [
-      {
-        timestamp: "last_edited_time",
-        direction: "descending",
-      },
-    ],
+    // No sorting - maintain Notion's manual order within groups
   };
 
   if (cursor) {
