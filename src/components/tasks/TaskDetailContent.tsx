@@ -638,6 +638,7 @@ export function TaskDetailContent({
           returnKeyType="done"
           blurOnSubmit={true}
           multiline
+          scrollEnabled={false}
           className={`flex-1 ml-2 font-semibold leading-tight ${
             isComplete
               ? "text-label-secondary dark:text-label-dark-secondary"
