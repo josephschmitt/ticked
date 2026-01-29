@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { ChevronRight, X } from "lucide-react-native";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
+import { useTaskCacheStore } from "@/stores/taskCacheStore";
 import { useStatuses } from "@/hooks/queries/useTasks";
 import { clearNotionClient } from "@/services/notion/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -161,6 +162,7 @@ export default function SettingsScreen() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const workspaceName = useAuthStore((state) => state.workspaceName);
   const clearConfig = useConfigStore((state) => state.clearConfig);
+  const clearTaskCache = useTaskCacheStore((state) => state.clearCache);
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const customListName = useConfigStore((state) => state.customListName);
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
@@ -290,6 +292,38 @@ export default function SettingsScreen() {
     router.dismiss();
   }, [router]);
 
+  const handleClearCache = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    Alert.alert(
+      "Clear Cache",
+      "This will clear locally cached tasks and fetch fresh data from Notion.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear Cache",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear the local task cache
+              await clearTaskCache();
+              // Clear TanStack Query cache to force refetch
+              queryClient.clear();
+
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+              // Dismiss settings and go back to task list which will refetch
+              router.dismiss();
+            } catch (error) {
+              console.error("Clear cache error:", error);
+              Alert.alert("Error", "Failed to clear cache. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }, [clearTaskCache, queryClient, router]);
+
   const handleSignOut = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -408,6 +442,11 @@ export default function SettingsScreen() {
 
         {/* Actions Section */}
         <SettingsSection>
+          <SettingsRow
+            label="Clear Cache & Refresh"
+            onPress={handleClearCache}
+            showChevron={false}
+          />
           <SettingsRow
             label="Sign Out"
             onPress={handleSignOut}
