@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, Modal, ScrollView, useColorScheme, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, FileText } from "lucide-react-native";
@@ -29,6 +30,11 @@ export function RelationPicker({
 }: RelationPickerProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  const sortedOptions = useMemo(
+    () => [...options].sort((a, b) => a.title.localeCompare(b.title)),
+    [options]
+  );
 
   const handleSelect = (option: RelationOption | null) => {
     Haptics.selectionAsync();
@@ -83,14 +89,14 @@ export function RelationPicker({
                       <Check size={20} color={BRAND_COLORS.primary} strokeWidth={3} />
                     )}
                   </Pressable>
-                  {options.length > 0 && (
+                  {sortedOptions.length > 0 && (
                     <View className="h-[0.5px] bg-separator dark:bg-separator-dark ml-4" />
                   )}
                 </>
               )}
 
-              {options.map((option, index) => {
-                const isLast = index === options.length - 1;
+              {sortedOptions.map((option, index) => {
+                const isLast = index === sortedOptions.length - 1;
                 const isSelected = selectedId === option.id;
 
                 return (
@@ -117,7 +123,7 @@ export function RelationPicker({
                 );
               })}
 
-              {options.length === 0 && !allowClear && (
+              {sortedOptions.length === 0 && !allowClear && (
                 <View className="py-8 items-center">
                   <Text className="text-[15px] text-label-secondary dark:text-label-dark-secondary">
                     No options available
