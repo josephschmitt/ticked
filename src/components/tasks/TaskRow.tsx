@@ -162,7 +162,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
         disabled={isToggling}
         className="flex-row items-center gap-2"
         style={{
-          paddingLeft: spacing.rowPaddingHorizontal * 1.5,
+          paddingLeft: spacing.rowPaddingHorizontal * 1.25,
           paddingTop: spacing.rowPaddingVertical,
           paddingBottom: spacing.rowPaddingVertical,
           paddingRight: spacing.rowPaddingHorizontal * 0.5,
