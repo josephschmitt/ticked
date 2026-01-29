@@ -1,4 +1,8 @@
-import { View, Text, ScrollView } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { Copy, Check } from "lucide-react-native";
 import SyntaxHighlighter from "react-native-syntax-highlighter";
 import { atomOneDark, atomOneLight } from "react-syntax-highlighter/dist/cjs/styles/hljs";
 import type { BlockProps } from "./types";
@@ -54,31 +58,70 @@ export function CodeBlock({ block, context }: BlockProps) {
     },
   };
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(codeText);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <View
       style={{
         marginBottom: 12,
-        padding: 12,
         borderRadius: 8,
         backgroundColor: bgColor,
         marginLeft: depth * 24,
       }}
     >
-      {block.code?.language && (
-        <Text style={{ marginBottom: 8, fontSize: 12, color: secondaryColor }}>
-          {block.code.language}
-        </Text>
-      )}
-      <SyntaxHighlighter
-        language={language}
-        style={customStyle}
-        fontSize={14}
-        fontFamily="Menlo"
-        PreTag={CodeScrollWrapper}
-        CodeTag={CodeWrapper}
+      {/* Header row with language and copy button */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingTop: 12,
+          paddingBottom: 8,
+        }}
       >
-        {codeText}
-      </SyntaxHighlighter>
+        <Text style={{ fontSize: 12, color: secondaryColor }}>
+          {block.code?.language || ""}
+        </Text>
+        <Pressable
+          onPress={handleCopy}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          {copied ? (
+            <Check size={12} color={secondaryColor} />
+          ) : (
+            <Copy size={12} color={secondaryColor} />
+          )}
+          <Text style={{ fontSize: 12, color: secondaryColor }}>
+            {copied ? "Copied" : "Copy"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Code content */}
+      <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+        <SyntaxHighlighter
+          language={language}
+          style={customStyle}
+          fontSize={14}
+          fontFamily="Menlo"
+          PreTag={CodeScrollWrapper}
+          CodeTag={CodeWrapper}
+        >
+          {codeText}
+        </SyntaxHighlighter>
+      </View>
     </View>
   );
 }
