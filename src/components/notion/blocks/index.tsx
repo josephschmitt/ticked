@@ -15,6 +15,7 @@ import { CalloutBlock } from "./CalloutBlock";
 import { ToggleBlock } from "./ToggleBlock";
 import { ImageBlock } from "./ImageBlock";
 import { BookmarkBlock } from "./BookmarkBlock";
+import { TableBlock } from "./TableBlock";
 import { UnsupportedBlock } from "./UnsupportedBlock";
 
 // Re-export types
@@ -41,6 +42,7 @@ const blockRegistry: Record<string, BlockComponent> = {
   toggle: ToggleBlock as unknown as BlockComponent, // Cast needed due to extra renderBlocks prop
   image: ImageBlock,
   bookmark: BookmarkBlock,
+  table: TableBlock as unknown as BlockComponent, // Cast needed due to extra renderBlocks prop
 };
 
 /**
@@ -71,6 +73,18 @@ function renderBlock(
   if (block.type === "toggle") {
     return (
       <ToggleBlock
+        key={block.id}
+        block={block}
+        context={context}
+        renderBlocks={renderBlocks}
+      />
+    );
+  }
+
+  // Special handling for table blocks which need renderBlocks callback
+  if (block.type === "table") {
+    return (
+      <TableBlock
         key={block.id}
         block={block}
         context={context}

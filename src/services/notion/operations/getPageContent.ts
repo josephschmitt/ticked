@@ -17,7 +17,9 @@ export type SupportedBlockType =
   | "callout"
   | "toggle"
   | "image"
-  | "bookmark";
+  | "bookmark"
+  | "table"
+  | "table_row";
 
 export interface RichTextItem {
   type: "text" | "mention" | "equation";
@@ -112,6 +114,14 @@ export interface NotionBlock {
     url: string;
     caption: RichTextItem[];
   };
+  table?: {
+    table_width: number;
+    has_column_header: boolean;
+    has_row_header: boolean;
+  };
+  table_row?: {
+    cells: RichTextItem[][];
+  };
   /** Pre-fetched children for nested blocks (lists, etc.) */
   children?: NotionBlock[];
 }
@@ -158,6 +168,7 @@ const NESTABLE_BLOCK_TYPES = [
   "bulleted_list_item",
   "numbered_list_item",
   "to_do",
+  "table",
 ] as const;
 
 /**
