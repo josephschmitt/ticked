@@ -24,6 +24,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="databases" options={{ title: "Select Database" }} />
       <Stack.Screen name="list-name" options={{ title: "List Name" }} />
       <Stack.Screen name="field-mapping" options={{ title: "Configure Fields" }} />
+      <Stack.Screen name="status-visibility" options={{ title: "Status Visibility" }} />
     </Stack>
   );
 }

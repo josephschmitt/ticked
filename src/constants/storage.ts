@@ -17,6 +17,7 @@ export const ASYNC_STORAGE_KEYS = {
   SHOW_TASK_TYPE_INLINE: "show_task_type_inline",
   APPROACHING_DAYS_THRESHOLD: "approaching_days_threshold",
   DEFAULT_STATUS_ID: "default_status_id",
+  HIDDEN_STATUS_IDS: "hidden_status_ids",
   // Offline cache keys
   CACHED_TASKS: "cached_tasks",
   CACHED_STATUSES: "cached_statuses",

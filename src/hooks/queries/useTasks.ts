@@ -89,17 +89,23 @@ export function useStatuses() {
 /**
  * Group tasks by status for display.
  * Excludes "complete" status groups - those are shown on a separate Done page.
+ * Excludes hidden statuses based on user settings.
  * Reverses the order from Notion to show active statuses first.
  */
 export function groupTasksByStatus(
   tasks: Task[],
-  statuses: TaskStatus[]
+  statuses: TaskStatus[],
+  hiddenStatusIds: string[] = []
 ): TaskGroup[] {
   const groups: TaskGroup[] = [];
+  const hiddenSet = new Set(hiddenStatusIds);
 
   for (const status of statuses) {
     // Skip complete statuses - they'll be shown on the Done page
     if (status.group === "complete") continue;
+
+    // Skip hidden statuses
+    if (hiddenSet.has(status.id)) continue;
 
     const tasksForStatus = tasks.filter((t) => t.status.id === status.id);
     groups.push({
@@ -207,11 +213,15 @@ export function groupTasksByCompletionDate(tasks: Task[]): DateTaskGroup[] {
 /**
  * Hook that provides tasks grouped by status.
  * Falls back to cached data when offline.
+ * Respects hidden status settings from configStore.
  */
 export function useGroupedTasks() {
   const tasksQuery = useTasks();
   const statusesQuery = useStatuses();
   const { isOffline } = useNetworkState();
+
+  // Get hidden status IDs from config
+  const hiddenStatusIds = useConfigStore((state) => state.hiddenStatusIds);
 
   // Get cached data for offline use
   const cachedTasks = useTaskCacheStore((state) => state.tasks);
@@ -224,7 +234,7 @@ export function useGroupedTasks() {
 
   const groups =
     tasks.length > 0 && statuses.length > 0
-      ? groupTasksByStatus(tasks, statuses)
+      ? groupTasksByStatus(tasks, statuses, hiddenStatusIds)
       : [];
 
   return {

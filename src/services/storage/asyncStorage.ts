@@ -170,6 +170,26 @@ export async function getDefaultStatusId(): Promise<string | null> {
 }
 
 /**
+ * Store hidden status IDs (statuses that won't be shown on the task list).
+ */
+export async function storeHiddenStatusIds(ids: string[]): Promise<void> {
+  await setAsyncItem(ASYNC_STORAGE_KEYS.HIDDEN_STATUS_IDS, JSON.stringify(ids));
+}
+
+/**
+ * Get hidden status IDs (defaults to empty array - all statuses visible).
+ */
+export async function getHiddenStatusIds(): Promise<string[]> {
+  const value = await getAsyncItem(ASYNC_STORAGE_KEYS.HIDDEN_STATUS_IDS);
+  if (value === null) return [];
+  try {
+    return JSON.parse(value) as string[];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Clear all configuration (used when signing out or reconfiguring).
  */
 export async function clearAllConfig(): Promise<void> {

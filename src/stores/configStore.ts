@@ -12,6 +12,8 @@ import {
   getApproachingDaysThreshold,
   storeDefaultStatusId,
   getDefaultStatusId,
+  storeHiddenStatusIds,
+  getHiddenStatusIds,
   clearAllConfig,
 } from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
@@ -24,6 +26,7 @@ interface ConfigState {
   showTaskTypeInline: boolean;
   approachingDaysThreshold: number;
   defaultStatusId: string | null;
+  hiddenStatusIds: string[];
   isConfigured: boolean;
   isLoading: boolean;
   setDatabase: (id: string, name: string) => Promise<void>;
@@ -32,6 +35,7 @@ interface ConfigState {
   setShowTaskTypeInline: (show: boolean) => Promise<void>;
   setApproachingDaysThreshold: (days: number) => Promise<void>;
   setDefaultStatusId: (id: string | null) => Promise<void>;
+  setHiddenStatusIds: (ids: string[]) => Promise<void>;
   clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   hydrate: () => Promise<void>;
@@ -45,6 +49,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   showTaskTypeInline: true,
   approachingDaysThreshold: 2,
   defaultStatusId: null,
+  hiddenStatusIds: [],
   isConfigured: false,
   isLoading: true,
 
@@ -102,6 +107,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     set({ defaultStatusId: id });
   },
 
+  setHiddenStatusIds: async (ids) => {
+    // Store in async storage
+    await storeHiddenStatusIds(ids);
+
+    // Update state
+    set({ hiddenStatusIds: ids });
+  },
+
   clearConfig: async () => {
     // Clear from async storage
     await clearAllConfig();
@@ -113,6 +126,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       customListName: null,
       fieldMapping: null,
       defaultStatusId: null,
+      hiddenStatusIds: [],
       isConfigured: false,
     });
   },
@@ -121,13 +135,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [dbConfig, customListName, fieldMapping, showTaskTypeInline, approachingDaysThreshold, defaultStatusId] = await Promise.all([
+      const [dbConfig, customListName, fieldMapping, showTaskTypeInline, approachingDaysThreshold, defaultStatusId, hiddenStatusIds] = await Promise.all([
         getDatabaseConfig(),
         getCustomListName(),
         getFieldMapping(),
         getShowTaskTypeInline(),
         getApproachingDaysThreshold(),
         getDefaultStatusId(),
+        getHiddenStatusIds(),
       ]);
 
       const isConfigured = !!(
@@ -144,6 +159,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         showTaskTypeInline,
         approachingDaysThreshold,
         defaultStatusId,
+        hiddenStatusIds,
         isConfigured,
         isLoading: false,
       });

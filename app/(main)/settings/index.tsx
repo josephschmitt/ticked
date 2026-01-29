@@ -191,6 +191,11 @@ export default function SettingsScreen() {
     router.push("/(main)/settings/list-name");
   }, [router]);
 
+  const handleChangeStatusVisibility = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push("/(main)/settings/status-visibility");
+  }, [router]);
+
   const handleToggleTaskTypeInline = useCallback((value: boolean) => {
     Haptics.selectionAsync();
     setShowTaskTypeInline(value);
@@ -426,6 +431,10 @@ export default function SettingsScreen() {
             label="Show Task Type Inline"
             value={showTaskTypeInline}
             onValueChange={handleToggleTaskTypeInline}
+          />
+          <SettingsRow
+            label="Status Visibility"
+            onPress={handleChangeStatusVisibility}
           />
           <SettingsRow
             label="Upcoming Warning"
