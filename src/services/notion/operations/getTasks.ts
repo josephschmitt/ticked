@@ -106,8 +106,6 @@ async function getStatusPropertyInfo(
 } | null> {
   const client = getNotionClient();
 
-  console.log('[getStatusPropertyInfo] Looking for status property:', statusPropertyId);
-
   const dataSource = (await client.dataSources.retrieve({
     data_source_id: dataSourceId,
   })) as unknown as {
@@ -122,11 +120,8 @@ async function getStatusPropertyInfo(
 
   // Find the status property by ID and get its name
   for (const [propName, prop] of Object.entries(dataSource.properties)) {
-    console.log('[getStatusPropertyInfo] Checking property:', propName, 'id:', prop.id, 'type:', prop.type);
     if (prop.id === statusPropertyId) {
-      console.log('[getStatusPropertyInfo] Found matching property:', propName);
       if (prop.type === 'checkbox') {
-        console.log('[getStatusPropertyInfo] Property is checkbox type');
         return {
           name: propName,
           type: 'checkbox',
@@ -140,12 +135,10 @@ async function getStatusPropertyInfo(
         const completeStatusNames: string[] = [];
         for (const opt of prop.status.options) {
           const group = inferStatusGroup(opt.name);
-          console.log('[getStatusPropertyInfo] Status option:', opt.name, 'id:', opt.id, 'inferred group:', group);
           if (group === 'complete') {
             completeStatusNames.push(opt.name);
           }
         }
-        console.log('[getStatusPropertyInfo] Complete status names:', completeStatusNames);
         return {
           name: propName,
           type: 'status',
@@ -154,7 +147,33 @@ async function getStatusPropertyInfo(
       }
     }
   }
-  console.log('[getStatusPropertyInfo] No matching property found!');
+  return null;
+}
+
+/**
+ * Fetches property name by ID from database schema.
+ * Used to get the completed date property name for sorting.
+ */
+async function getPropertyNameById(
+  dataSourceId: string,
+  propertyId: string
+): Promise<string | null> {
+  const client = getNotionClient();
+
+  const dataSource = (await client.dataSources.retrieve({
+    data_source_id: dataSourceId,
+  })) as unknown as {
+    properties: Record<string, {
+      id: string;
+      type: string;
+    }>;
+  };
+
+  for (const [propName, prop] of Object.entries(dataSource.properties)) {
+    if (prop.id === propertyId) {
+      return propName;
+    }
+  }
   return null;
 }
 
@@ -167,63 +186,51 @@ function buildStatusFilter(
   filterType: TaskFilterType,
   completeStatusNames: string[]
 ): Record<string, unknown> | undefined {
-  console.log('[buildStatusFilter] Building filter:', { propertyName, propertyType, filterType, completeStatusNames });
-
   if (filterType === 'all') return undefined;
 
   if (propertyType === 'checkbox') {
-    const filter = {
+    return {
       property: propertyName,
       checkbox: { equals: filterType === 'completed' }
     };
-    console.log('[buildStatusFilter] Checkbox filter:', JSON.stringify(filter));
-    return filter;
   }
 
   // For status property type - use status NAMES in the filter
   if (completeStatusNames.length === 0) {
-    console.log('[buildStatusFilter] No complete status names, returning undefined');
     return undefined;
   }
-
-  let filter: Record<string, unknown>;
 
   if (filterType === 'active') {
     // Exclude completed statuses
     if (completeStatusNames.length === 1) {
-      filter = {
+      return {
         property: propertyName,
         status: { does_not_equal: completeStatusNames[0] }
       };
-    } else {
-      // Multiple complete statuses - need AND filter
-      filter = {
-        and: completeStatusNames.map(name => ({
-          property: propertyName,
-          status: { does_not_equal: name }
-        }))
-      };
     }
-  } else {
-    // Include only completed statuses
-    if (completeStatusNames.length === 1) {
-      filter = {
+    // Multiple complete statuses - need AND filter
+    return {
+      and: completeStatusNames.map(name => ({
         property: propertyName,
-        status: { equals: completeStatusNames[0] }
-      };
-    } else {
-      // Multiple complete statuses - need OR filter
-      filter = {
-        or: completeStatusNames.map(name => ({
-          property: propertyName,
-          status: { equals: name }
-        }))
-      };
-    }
+        status: { does_not_equal: name }
+      }))
+    };
   }
 
-  console.log('[buildStatusFilter] Status filter:', JSON.stringify(filter));
-  return filter;
+  // Include only completed statuses
+  if (completeStatusNames.length === 1) {
+    return {
+      property: propertyName,
+      status: { equals: completeStatusNames[0] }
+    };
+  }
+  // Multiple complete statuses - need OR filter
+  return {
+    or: completeStatusNames.map(name => ({
+      property: propertyName,
+      status: { equals: name }
+    }))
+  };
 }
 
 /**
@@ -575,20 +582,36 @@ export async function getTasksPaginated(
     }
   }
 
+  // Build sort for completed tasks - sort by completion date descending
+  let sorts: Array<{ property: string; direction: 'descending' | 'ascending' } | { timestamp: 'last_edited_time' | 'created_time'; direction: 'descending' | 'ascending' }> | undefined = undefined;
+  if (filterType === 'completed' && fieldMapping.completedDate) {
+    const completedDatePropertyName = await getPropertyNameById(dataSourceId, fieldMapping.completedDate);
+    if (completedDatePropertyName) {
+      sorts = [{ property: completedDatePropertyName, direction: 'descending' }];
+    } else {
+      // Fallback to last_edited_time if we can't resolve the property name
+      sorts = [{ timestamp: 'last_edited_time', direction: 'descending' }];
+    }
+  }
+
   // Build query args
   const queryArgs: {
     data_source_id: string;
     page_size: number;
     start_cursor?: string;
     filter?: Record<string, unknown>;
+    sorts?: typeof sorts;
   } = {
     data_source_id: dataSourceId,
     page_size: pageSize,
-    // No sorting - maintain Notion's manual order within groups
   };
 
   if (filter) {
     queryArgs.filter = filter;
+  }
+
+  if (sorts) {
+    queryArgs.sorts = sorts;
   }
 
   if (cursor) {
