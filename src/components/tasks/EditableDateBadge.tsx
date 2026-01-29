@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { View, Pressable, Platform, Modal, Text, useColorScheme } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { DateBadge } from "@/components/ui/DateBadge";
 import { BRAND_COLORS } from "@/constants/colors";
@@ -103,53 +102,63 @@ export function EditableDateBadge({
       {Platform.OS === "ios" ? (
         <Modal
           visible={showPicker}
-          animationType="slide"
-          presentationStyle="pageSheet"
+          animationType="fade"
+          transparent={true}
           onRequestClose={handleCancel}
         >
-          <SafeAreaView className="flex-1 bg-background-grouped dark:bg-background-dark-grouped">
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3 border-b border-separator dark:border-separator-dark bg-background-elevated dark:bg-background-dark-elevated">
-              <Pressable onPress={handleCancel} className="px-2 py-1">
-                <Text className="text-[17px]" style={{ color: BRAND_COLORS.primary }}>
-                  Cancel
+          <Pressable
+            className="flex-1 justify-center items-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            onPress={handleCancel}
+          >
+            <Pressable
+              className="mx-6 rounded-2xl overflow-hidden bg-background-elevated dark:bg-background-dark-elevated"
+              onPress={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <View className="flex-row items-center justify-between px-4 py-3 border-b border-separator dark:border-separator-dark">
+                <Pressable onPress={handleCancel} className="px-2 py-1">
+                  <Text className="text-[17px]" style={{ color: BRAND_COLORS.primary }}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Text className="text-[17px] font-semibold text-label-primary dark:text-label-dark-primary">
+                  {type === "do" ? "Do Date" : "Due Date"}
                 </Text>
-              </Pressable>
-              <Text className="text-[17px] font-semibold text-label-primary dark:text-label-dark-primary">
-                {type === "do" ? "Do Date" : "Due Date"}
-              </Text>
-              <Pressable onPress={handleDone} className="px-2 py-1">
-                <Text className="text-[17px] font-semibold" style={{ color: BRAND_COLORS.primary }}>
-                  Done
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Date picker */}
-            <View className="flex-1 justify-center items-center">
-              <DateTimePicker
-                value={dateValue}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                themeVariant={isDark ? "dark" : "light"}
-              />
-            </View>
-
-            {/* Clear button */}
-            {date && (
-              <View className="px-4 pb-4">
-                <Pressable
-                  onPress={handleClear}
-                  className="py-3 items-center rounded-[10px] bg-background-elevated dark:bg-background-dark-elevated"
-                >
-                  <Text className="text-[17px] text-ios-red">
-                    Clear Date
+                <Pressable onPress={handleDone} className="px-2 py-1">
+                  <Text className="text-[17px] font-semibold" style={{ color: BRAND_COLORS.primary }}>
+                    Done
                   </Text>
                 </Pressable>
               </View>
-            )}
-          </SafeAreaView>
+
+              {/* Date picker - inline calendar style */}
+              <View className="p-2">
+                <DateTimePicker
+                  value={dateValue}
+                  mode="date"
+                  display="inline"
+                  onChange={handleDateChange}
+                  themeVariant={isDark ? "dark" : "light"}
+                />
+              </View>
+
+              {/* Clear button */}
+              {date && (
+                <View className="px-4 pb-4">
+                  <Pressable
+                    onPress={handleClear}
+                    className="py-3 items-center rounded-[10px]"
+                    style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                  >
+                    <Text className="text-[17px] text-ios-red">
+                      Clear Date
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </Pressable>
+          </Pressable>
         </Modal>
       ) : (
         showPicker && (
