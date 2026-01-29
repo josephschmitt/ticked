@@ -281,7 +281,9 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    height: 48,
     fontSize: 17,
+    lineHeight: 22,
     marginLeft: 10,
     paddingVertical: 0,
   },
