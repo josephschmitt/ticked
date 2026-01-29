@@ -59,6 +59,14 @@ interface RelationResult {
 }
 
 /**
+ * Filter type for task queries.
+ * - 'active': Only non-completed tasks
+ * - 'completed': Only completed tasks
+ * - 'all': All tasks (no filter)
+ */
+export type TaskFilterType = 'active' | 'completed' | 'all';
+
+/**
  * Infer status group from status name.
  */
 function inferStatusGroup(statusName: string): StatusGroup {
@@ -81,6 +89,141 @@ function inferStatusGroup(statusName: string): StatusGroup {
   }
 
   return "todo";
+}
+
+/**
+ * Fetches status property info from database schema.
+ * Returns property name, type, and complete status names needed for filtering.
+ * NOTE: Notion API filter uses status NAMES, not IDs.
+ */
+async function getStatusPropertyInfo(
+  dataSourceId: string,
+  statusPropertyId: string
+): Promise<{
+  name: string;
+  type: 'status' | 'checkbox';
+  completeStatusNames: string[];
+} | null> {
+  const client = getNotionClient();
+
+  console.log('[getStatusPropertyInfo] Looking for status property:', statusPropertyId);
+
+  const dataSource = (await client.dataSources.retrieve({
+    data_source_id: dataSourceId,
+  })) as unknown as {
+    properties: Record<string, {
+      id: string;
+      type: string;
+      status?: {
+        options: Array<{ id: string; name: string; color: string }>;
+      };
+    }>;
+  };
+
+  // Find the status property by ID and get its name
+  for (const [propName, prop] of Object.entries(dataSource.properties)) {
+    console.log('[getStatusPropertyInfo] Checking property:', propName, 'id:', prop.id, 'type:', prop.type);
+    if (prop.id === statusPropertyId) {
+      console.log('[getStatusPropertyInfo] Found matching property:', propName);
+      if (prop.type === 'checkbox') {
+        console.log('[getStatusPropertyInfo] Property is checkbox type');
+        return {
+          name: propName,
+          type: 'checkbox',
+          completeStatusNames: ['checked'], // Not used for checkbox, but keeps type consistent
+        };
+      }
+
+      if (prop.type === 'status' && prop.status) {
+        // Find which status options are "complete"
+        // NOTE: Notion API filter uses status NAME, not ID
+        const completeStatusNames: string[] = [];
+        for (const opt of prop.status.options) {
+          const group = inferStatusGroup(opt.name);
+          console.log('[getStatusPropertyInfo] Status option:', opt.name, 'id:', opt.id, 'inferred group:', group);
+          if (group === 'complete') {
+            completeStatusNames.push(opt.name);
+          }
+        }
+        console.log('[getStatusPropertyInfo] Complete status names:', completeStatusNames);
+        return {
+          name: propName,
+          type: 'status',
+          completeStatusNames,
+        };
+      }
+    }
+  }
+  console.log('[getStatusPropertyInfo] No matching property found!');
+  return null;
+}
+
+/**
+ * Builds a Notion API filter for status-based filtering.
+ */
+function buildStatusFilter(
+  propertyName: string,
+  propertyType: 'status' | 'checkbox',
+  filterType: TaskFilterType,
+  completeStatusNames: string[]
+): Record<string, unknown> | undefined {
+  console.log('[buildStatusFilter] Building filter:', { propertyName, propertyType, filterType, completeStatusNames });
+
+  if (filterType === 'all') return undefined;
+
+  if (propertyType === 'checkbox') {
+    const filter = {
+      property: propertyName,
+      checkbox: { equals: filterType === 'completed' }
+    };
+    console.log('[buildStatusFilter] Checkbox filter:', JSON.stringify(filter));
+    return filter;
+  }
+
+  // For status property type - use status NAMES in the filter
+  if (completeStatusNames.length === 0) {
+    console.log('[buildStatusFilter] No complete status names, returning undefined');
+    return undefined;
+  }
+
+  let filter: Record<string, unknown>;
+
+  if (filterType === 'active') {
+    // Exclude completed statuses
+    if (completeStatusNames.length === 1) {
+      filter = {
+        property: propertyName,
+        status: { does_not_equal: completeStatusNames[0] }
+      };
+    } else {
+      // Multiple complete statuses - need AND filter
+      filter = {
+        and: completeStatusNames.map(name => ({
+          property: propertyName,
+          status: { does_not_equal: name }
+        }))
+      };
+    }
+  } else {
+    // Include only completed statuses
+    if (completeStatusNames.length === 1) {
+      filter = {
+        property: propertyName,
+        status: { equals: completeStatusNames[0] }
+      };
+    } else {
+      // Multiple complete statuses - need OR filter
+      filter = {
+        or: completeStatusNames.map(name => ({
+          property: propertyName,
+          status: { equals: name }
+        }))
+      };
+    }
+  }
+
+  console.log('[buildStatusFilter] Status filter:', JSON.stringify(filter));
+  return filter;
 }
 
 /**
@@ -308,12 +451,29 @@ async function getPageInfos(pageIds: string[]): Promise<Map<string, PageInfo>> {
 /**
  * Fetch tasks from a Notion data source using field mapping.
  * Note: As of Notion API 2025-09-03, databases are now called "data sources".
+ *
+ * @param filterType - 'active' for non-completed tasks, 'completed' for done tasks, 'all' for everything
  */
 export async function getTasks(
   dataSourceId: string,
-  fieldMapping: FieldMapping
+  fieldMapping: FieldMapping,
+  filterType: TaskFilterType = 'all'
 ): Promise<Task[]> {
   const client = getNotionClient();
+
+  // Build filter if needed
+  let filter: Record<string, unknown> | undefined = undefined;
+  if (filterType !== 'all') {
+    const statusInfo = await getStatusPropertyInfo(dataSourceId, fieldMapping.status);
+    if (statusInfo) {
+      filter = buildStatusFilter(
+        statusInfo.name,
+        statusInfo.type,
+        filterType,
+        statusInfo.completeStatusNames
+      );
+    }
+  }
 
   // Fetch ALL pages, not just the first 100
   const allResults: PageResult[] = [];
@@ -326,6 +486,10 @@ export async function getTasks(
       page_size: 100,
       // No sorting - maintain Notion's manual order
     };
+
+    if (filter) {
+      queryArgs.filter = filter;
+    }
 
     if (cursor) {
       queryArgs.start_cursor = cursor;
@@ -385,26 +549,47 @@ export async function getTasks(
 
 /**
  * Fetch tasks with pagination support.
+ *
+ * @param filterType - 'active' for non-completed tasks, 'completed' for done tasks, 'all' for everything
  */
 export async function getTasksPaginated(
   dataSourceId: string,
   fieldMapping: FieldMapping,
   cursor?: string | null,
-  pageSize: number = 50
+  pageSize: number = 50,
+  filterType: TaskFilterType = 'all'
 ): Promise<PaginatedTasksResult> {
   const client = getNotionClient();
+
+  // Build filter if needed
+  let filter: Record<string, unknown> | undefined = undefined;
+  if (filterType !== 'all') {
+    const statusInfo = await getStatusPropertyInfo(dataSourceId, fieldMapping.status);
+    if (statusInfo) {
+      filter = buildStatusFilter(
+        statusInfo.name,
+        statusInfo.type,
+        filterType,
+        statusInfo.completeStatusNames
+      );
+    }
+  }
 
   // Build query args
   const queryArgs: {
     data_source_id: string;
     page_size: number;
     start_cursor?: string;
-    sorts?: Array<{ timestamp: string; direction: string }>;
+    filter?: Record<string, unknown>;
   } = {
     data_source_id: dataSourceId,
     page_size: pageSize,
     // No sorting - maintain Notion's manual order within groups
   };
+
+  if (filter) {
+    queryArgs.filter = filter;
+  }
 
   if (cursor) {
     queryArgs.start_cursor = cursor;

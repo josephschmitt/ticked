@@ -11,8 +11,9 @@ export const STATUSES_QUERY_KEY = ["statuses"] as const;
 export const COMPLETED_TASKS_QUERY_KEY = ["completedTasks"] as const;
 
 /**
- * Hook to fetch tasks from the configured database.
+ * Hook to fetch active (non-completed) tasks from the configured database.
  * Uses cached tasks as placeholder data for instant display.
+ * Filters out completed tasks at the API level for better performance.
  */
 export function useTasks() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -28,12 +29,13 @@ export function useTasks() {
   const { isOffline } = useNetworkState();
 
   return useQuery({
-    queryKey: [...TASKS_QUERY_KEY, databaseId],
+    queryKey: [...TASKS_QUERY_KEY, databaseId, 'active'],
     queryFn: async () => {
       if (!databaseId || !fieldMapping) {
         throw new Error("Database not configured");
       }
-      const tasks = await getTasks(databaseId, fieldMapping);
+      // Only fetch active (non-completed) tasks
+      const tasks = await getTasks(databaseId, fieldMapping, 'active');
 
       // Update cache after successful fetch
       await setTasks(tasks);
@@ -241,6 +243,7 @@ export function useGroupedTasks() {
 /**
  * Hook that provides completed tasks with infinite scroll support.
  * Tasks are grouped by completion date, descending (most recent first).
+ * Filters to only completed tasks at the API level for better performance.
  */
 export function useCompletedTasks() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -248,12 +251,13 @@ export function useCompletedTasks() {
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
 
   const query = useInfiniteQuery({
-    queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId],
+    queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, 'completed'],
     queryFn: async ({ pageParam }) => {
       if (!databaseId || !fieldMapping) {
         throw new Error("Database not configured");
       }
-      return getTasksPaginated(databaseId, fieldMapping, pageParam, 50);
+      // Only fetch completed tasks
+      return getTasksPaginated(databaseId, fieldMapping, pageParam, 50, 'completed');
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
@@ -261,7 +265,7 @@ export function useCompletedTasks() {
     staleTime: 1000 * 30,
   });
 
-  // Flatten all pages and filter to only completed tasks, then group by date
+  // Flatten all pages and group by date (no client-side status filtering needed)
   const allTasks = query.data?.pages.flatMap((page) => page.tasks) ?? [];
   const groups = groupTasksByCompletionDate(allTasks);
   const totalCount = groups.reduce((acc, g) => acc + g.tasks.length, 0);
