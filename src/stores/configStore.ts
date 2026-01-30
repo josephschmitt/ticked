@@ -12,11 +12,12 @@ import {
   getApproachingDaysThreshold,
   storeDefaultStatusId,
   getDefaultStatusId,
-  storeDefaultTaskTypeId,
-  getDefaultTaskTypeId,
+  storeDefaultTaskType,
+  getDefaultTaskType,
   storeHiddenStatusIds,
   getHiddenStatusIds,
   clearAllConfig,
+  type StoredDefaultTaskType,
 } from "@/services/storage/asyncStorage";
 import type { FieldMapping } from "@/types/fieldMapping";
 
@@ -28,7 +29,10 @@ interface ConfigState {
   showTaskTypeInline: boolean;
   approachingDaysThreshold: number;
   defaultStatusId: string | null;
+  /** @deprecated Use defaultTaskType instead */
   defaultTaskTypeId: string | null;
+  /** Full default task type data for immediate access */
+  defaultTaskType: StoredDefaultTaskType | null;
   hiddenStatusIds: string[];
   isConfigured: boolean;
   isLoading: boolean;
@@ -38,7 +42,10 @@ interface ConfigState {
   setShowTaskTypeInline: (show: boolean) => Promise<void>;
   setApproachingDaysThreshold: (days: number) => Promise<void>;
   setDefaultStatusId: (id: string | null) => Promise<void>;
+  /** @deprecated Use setDefaultTaskType instead */
   setDefaultTaskTypeId: (id: string | null) => Promise<void>;
+  /** Set default task type with full display data */
+  setDefaultTaskType: (taskType: StoredDefaultTaskType | null) => Promise<void>;
   setHiddenStatusIds: (ids: string[]) => Promise<void>;
   clearConfig: () => Promise<void>;
   setLoading: (loading: boolean) => void;
@@ -54,6 +61,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   approachingDaysThreshold: 2,
   defaultStatusId: null,
   defaultTaskTypeId: null,
+  defaultTaskType: null,
   hiddenStatusIds: [],
   isConfigured: false,
   isLoading: true,
@@ -113,11 +121,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   setDefaultTaskTypeId: async (id) => {
-    // Store in async storage
-    await storeDefaultTaskTypeId(id);
+    // Deprecated: Use setDefaultTaskType instead
+    // This only updates the ID, not the full data
+    console.warn("setDefaultTaskTypeId is deprecated. Use setDefaultTaskType instead.");
+    set({ defaultTaskTypeId: id });
+  },
+
+  setDefaultTaskType: async (taskType) => {
+    // Store in async storage (stores both full data and ID for backwards compat)
+    await storeDefaultTaskType(taskType);
 
     // Update state
-    set({ defaultTaskTypeId: id });
+    set({
+      defaultTaskType: taskType,
+      defaultTaskTypeId: taskType?.id ?? null,
+    });
   },
 
   setHiddenStatusIds: async (ids) => {
@@ -140,6 +158,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       fieldMapping: null,
       defaultStatusId: null,
       defaultTaskTypeId: null,
+      defaultTaskType: null,
       hiddenStatusIds: [],
       isConfigured: false,
     });
@@ -149,14 +168,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [dbConfig, customListName, fieldMapping, showTaskTypeInline, approachingDaysThreshold, defaultStatusId, defaultTaskTypeId, hiddenStatusIds] = await Promise.all([
+      const [dbConfig, customListName, fieldMapping, showTaskTypeInline, approachingDaysThreshold, defaultStatusId, defaultTaskType, hiddenStatusIds] = await Promise.all([
         getDatabaseConfig(),
         getCustomListName(),
         getFieldMapping(),
         getShowTaskTypeInline(),
         getApproachingDaysThreshold(),
         getDefaultStatusId(),
-        getDefaultTaskTypeId(),
+        getDefaultTaskType(),
         getHiddenStatusIds(),
       ]);
 
@@ -174,7 +193,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         showTaskTypeInline,
         approachingDaysThreshold,
         defaultStatusId,
-        defaultTaskTypeId,
+        defaultTaskTypeId: defaultTaskType?.id ?? null,
+        defaultTaskType,
         hiddenStatusIds,
         isConfigured,
         isLoading: false,

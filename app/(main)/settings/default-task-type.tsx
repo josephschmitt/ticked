@@ -29,7 +29,7 @@ interface TaskTypeOption {
 interface TaskTypeRowProps {
   option: TaskTypeOption;
   isSelected: boolean;
-  onSelect: (id: string | null) => void;
+  onSelect: (option: TaskTypeOption) => void;
   isLast?: boolean;
 }
 
@@ -45,8 +45,8 @@ function TaskTypeRow({
 
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
-    onSelect(option.id);
-  }, [option.id, onSelect]);
+    onSelect(option);
+  }, [option, onSelect]);
 
   const iconColor = isDark ? IOS_GRAYS.gray2 : IOS_GRAYS.system;
 
@@ -195,8 +195,8 @@ export default function DefaultTaskTypeScreen() {
 
   const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const fieldMapping = useConfigStore((state) => state.fieldMapping);
-  const defaultTaskTypeId = useConfigStore((state) => state.defaultTaskTypeId);
-  const setDefaultTaskTypeId = useConfigStore((state) => state.setDefaultTaskTypeId);
+  const defaultTaskType = useConfigStore((state) => state.defaultTaskType);
+  const setDefaultTaskType = useConfigStore((state) => state.setDefaultTaskType);
 
   const { data: schema, isLoading: isLoadingSchema } = useDatabaseSchema(databaseId);
   const taskTypeProperty = schema?.properties.find((p) => p.id === fieldMapping?.taskType);
@@ -239,11 +239,22 @@ export default function DefaultTaskTypeScreen() {
   }, [taskTypeProperty, taskTypeRelationOptions]);
 
   const handleSelect = useCallback(
-    async (id: string | null) => {
-      await setDefaultTaskTypeId(id);
+    async (option: TaskTypeOption) => {
+      if (option.id === null) {
+        // Clear the default task type
+        await setDefaultTaskType(null);
+      } else {
+        // Store the full task type data
+        await setDefaultTaskType({
+          id: option.id,
+          type: option.type as "select" | "relation",
+          name: option.name,
+          icon: option.icon,
+        });
+      }
       router.back();
     },
-    [setDefaultTaskTypeId, router]
+    [setDefaultTaskType, router]
   );
 
   if (isLoading) {
@@ -274,7 +285,7 @@ export default function DefaultTaskTypeScreen() {
             <TaskTypeRow
               key={option.id ?? "none"}
               option={option}
-              isSelected={defaultTaskTypeId === option.id}
+              isSelected={defaultTaskType?.id === option.id}
               onSelect={handleSelect}
               isLast={index === options.length - 1}
             />

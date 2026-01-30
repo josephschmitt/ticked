@@ -3,6 +3,15 @@ import { ASYNC_STORAGE_KEYS, type AsyncStorageKey } from "@/constants/storage";
 import type { FieldMapping } from "@/types/fieldMapping";
 import type { Task, TaskStatus } from "@/types/task";
 import type { PendingMutation, SyncConflict } from "@/types/mutation";
+import type { DatabaseIcon } from "@/types/database";
+
+/** Stored default task type with full display data */
+export interface StoredDefaultTaskType {
+  id: string;
+  type: "select" | "relation";
+  name: string;
+  icon?: DatabaseIcon | null;
+}
 
 /**
  * Async storage wrapper for non-sensitive preferences and configuration.
@@ -186,6 +195,38 @@ export async function storeDefaultTaskTypeId(id: string | null): Promise<void> {
  */
 export async function getDefaultTaskTypeId(): Promise<string | null> {
   return getAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID);
+}
+
+/**
+ * Store default task type with full display data.
+ */
+export async function storeDefaultTaskType(taskType: StoredDefaultTaskType | null): Promise<void> {
+  if (taskType) {
+    await Promise.all([
+      setAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE, JSON.stringify(taskType)),
+      setAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID, taskType.id),
+    ]);
+  } else {
+    await Promise.all([
+      deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE),
+      deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID),
+    ]);
+  }
+}
+
+/**
+ * Get default task type with full display data.
+ */
+export async function getDefaultTaskType(): Promise<StoredDefaultTaskType | null> {
+  const json = await getAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE);
+  if (!json) return null;
+
+  try {
+    return JSON.parse(json) as StoredDefaultTaskType;
+  } catch {
+    console.error("Failed to parse default task type JSON");
+    return null;
+  }
 }
 
 /**
