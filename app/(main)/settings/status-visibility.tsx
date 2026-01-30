@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useConfigStore } from "@/stores/configStore";
 import { useStatuses } from "@/hooks/queries/useTasks";
-import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
+import { BRAND_COLORS, NOTION_COLORS, type NotionColor } from "@/constants/colors";
 import { useMacSizing } from "@/hooks/useMacSizing";
 import type { TaskStatus } from "@/types/task";
 
@@ -21,6 +21,7 @@ interface StatusToggleRowProps {
   onToggle: (statusId: string, visible: boolean) => void;
   isLast?: boolean;
   disabled?: boolean;
+  isDark?: boolean;
 }
 
 function StatusToggleRow({
@@ -29,8 +30,15 @@ function StatusToggleRow({
   onToggle,
   isLast = false,
   disabled = false,
+  isDark = false,
 }: StatusToggleRowProps) {
   const { fontSize, spacing, minHeight } = useMacSizing();
+
+  // Use the same color mapping as task detail status badge
+  const statusColorKey = status.color as NotionColor;
+  const statusBgColor = statusColorKey && NOTION_COLORS[statusColorKey]
+    ? (isDark ? NOTION_COLORS[statusColorKey].dark : NOTION_COLORS[statusColorKey].light)
+    : (isDark ? NOTION_COLORS.default.dark : NOTION_COLORS.default.light);
 
   const handleValueChange = useCallback(
     (value: boolean) => {
@@ -54,7 +62,7 @@ function StatusToggleRow({
         <View className="flex-row items-center flex-1 mr-3">
           <View
             className="w-3 h-3 rounded-full mr-3"
-            style={{ backgroundColor: status.color }}
+            style={{ backgroundColor: statusBgColor }}
           />
           <Text
             className="text-label-primary dark:text-label-dark-primary flex-1"
@@ -197,6 +205,7 @@ export default function StatusVisibilityScreen() {
                 onToggle={handleToggle}
                 isLast={index === activeStatuses.length - 1}
                 disabled={isLastVisible}
+                isDark={isDark}
               />
             );
           })}
