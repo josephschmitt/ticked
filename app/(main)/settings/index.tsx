@@ -19,6 +19,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useConfigStore } from "@/stores/configStore";
 import { useTaskCacheStore } from "@/stores/taskCacheStore";
 import { useStatuses } from "@/hooks/queries/useTasks";
+import { useDatabaseSchema } from "@/hooks/queries/useDatabaseSchema";
+import { useRelationOptions } from "@/hooks/queries/useRelationOptions";
 import { clearNotionClient } from "@/services/notion/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRAND_COLORS, IOS_GRAYS } from "@/constants/colors";
@@ -163,18 +165,29 @@ export default function SettingsScreen() {
   const workspaceName = useAuthStore((state) => state.workspaceName);
   const clearConfig = useConfigStore((state) => state.clearConfig);
   const clearTaskCache = useTaskCacheStore((state) => state.clearCache);
+  const databaseId = useConfigStore((state) => state.selectedDatabaseId);
   const databaseName = useConfigStore((state) => state.selectedDatabaseName);
   const customListName = useConfigStore((state) => state.customListName);
+  const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const showTaskTypeInline = useConfigStore((state) => state.showTaskTypeInline);
   const setShowTaskTypeInline = useConfigStore((state) => state.setShowTaskTypeInline);
   const approachingDaysThreshold = useConfigStore((state) => state.approachingDaysThreshold);
   const setApproachingDaysThreshold = useConfigStore((state) => state.setApproachingDaysThreshold);
   const defaultStatusId = useConfigStore((state) => state.defaultStatusId);
   const setDefaultStatusId = useConfigStore((state) => state.setDefaultStatusId);
+  const defaultTaskTypeId = useConfigStore((state) => state.defaultTaskTypeId);
 
   // Get available statuses for the default status picker
   const { data: statuses } = useStatuses();
   const todoStatuses = statuses?.filter((s) => s.group === "todo" || s.group === "inProgress") || [];
+
+  // Get task type options for displaying the current default label
+  const hasTaskTypeField = !!fieldMapping?.taskType;
+  const { data: schema } = useDatabaseSchema(hasTaskTypeField ? databaseId : null);
+  const taskTypeProperty = schema?.properties.find((p) => p.id === fieldMapping?.taskType);
+  const { data: taskTypeRelationOptions } = useRelationOptions(
+    taskTypeProperty?.type === "relation" ? taskTypeProperty.relationDatabaseId : undefined
+  );
 
   const handleChangeDatabase = useCallback(() => {
     Haptics.selectionAsync();
@@ -253,6 +266,27 @@ export default function SettingsScreen() {
     const status = statuses?.find((s) => s.id === defaultStatusId);
     return status?.name || "Auto (first To-do)";
   }, [defaultStatusId, statuses]);
+
+  const getDefaultTaskTypeLabel = useCallback(() => {
+    if (!defaultTaskTypeId) return "None";
+
+    if (taskTypeProperty?.type === "select") {
+      const option = taskTypeProperty.options?.find((o) => o.id === defaultTaskTypeId);
+      return option?.name || "None";
+    }
+
+    if (taskTypeProperty?.type === "relation") {
+      const option = taskTypeRelationOptions?.find((o) => o.id === defaultTaskTypeId);
+      return option?.title || "None";
+    }
+
+    return "None";
+  }, [defaultTaskTypeId, taskTypeProperty, taskTypeRelationOptions]);
+
+  const handleChangeDefaultTaskType = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push("/(main)/settings/default-task-type");
+  }, [router]);
 
   const handleChangeDefaultStatus = useCallback(() => {
     Haptics.selectionAsync();
@@ -427,11 +461,20 @@ export default function SettingsScreen() {
 
         {/* Display Section */}
         <SettingsSection title="Display">
-          <SettingsToggleRow
-            label="Show Task Type Inline"
-            value={showTaskTypeInline}
-            onValueChange={handleToggleTaskTypeInline}
-          />
+          {hasTaskTypeField && (
+            <>
+              <SettingsToggleRow
+                label="Show Task Type Inline"
+                value={showTaskTypeInline}
+                onValueChange={handleToggleTaskTypeInline}
+              />
+              <SettingsRow
+                label="Default Task Type"
+                value={getDefaultTaskTypeLabel()}
+                onPress={handleChangeDefaultTaskType}
+              />
+            </>
+          )}
           <SettingsRow
             label="Status Visibility"
             onPress={handleChangeStatusVisibility}

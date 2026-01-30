@@ -170,6 +170,25 @@ export async function getDefaultStatusId(): Promise<string | null> {
 }
 
 /**
+ * Store default task type ID (used when creating new tasks).
+ * Can be a select option name or relation page ID.
+ */
+export async function storeDefaultTaskTypeId(id: string | null): Promise<void> {
+  if (id) {
+    await setAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID, id);
+  } else {
+    await deleteAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID);
+  }
+}
+
+/**
+ * Get default task type ID.
+ */
+export async function getDefaultTaskTypeId(): Promise<string | null> {
+  return getAsyncItem(ASYNC_STORAGE_KEYS.DEFAULT_TASK_TYPE_ID);
+}
+
+/**
  * Store hidden status IDs (statuses that won't be shown on the task list).
  */
 export async function storeHiddenStatusIds(ids: string[]): Promise<void> {

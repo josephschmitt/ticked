@@ -9,11 +9,14 @@ import {
 import { router } from "expo-router";
 import { useConfigStore } from "@/stores/configStore";
 import { useStatuses } from "@/hooks/queries/useTasks";
-import { useCreateTask, type CreateTaskParams } from "@/hooks/mutations/useCreateTask";
+import { useDatabaseSchema } from "@/hooks/queries/useDatabaseSchema";
+import { useRelationOptions } from "@/hooks/queries/useRelationOptions";
+import { useCreateTask, type CreateTaskParams, type TaskTypeValue } from "@/hooks/mutations/useCreateTask";
 import { TaskDetailHeader } from "@/components/tasks/TaskDetailHeader";
 import { TaskDetailContent } from "@/components/tasks/TaskDetailContent";
 import { IOS_BACKGROUNDS } from "@/constants/colors";
 import type { TaskStatus } from "@/types/task";
+import type { DatabaseIcon } from "@/types/database";
 
 const FULL_SCREEN_THRESHOLD = 0.7;
 
@@ -28,8 +31,18 @@ export default function NewTaskScreen() {
   const shouldCreateRef = useRef(true);
 
   const defaultStatusId = useConfigStore((state) => state.defaultStatusId);
+  const defaultTaskTypeId = useConfigStore((state) => state.defaultTaskTypeId);
+  const databaseId = useConfigStore((state) => state.selectedDatabaseId);
+  const fieldMapping = useConfigStore((state) => state.fieldMapping);
   const { data: statuses } = useStatuses();
   const createTaskMutation = useCreateTask();
+
+  // Get task type schema and options for resolving default task type
+  const { data: schema } = useDatabaseSchema(fieldMapping?.taskType ? databaseId : null);
+  const taskTypeProperty = schema?.properties.find((p) => p.id === fieldMapping?.taskType);
+  const { data: taskTypeRelationOptions } = useRelationOptions(
+    taskTypeProperty?.type === "relation" ? taskTypeProperty.relationDatabaseId : undefined
+  );
 
   // Store mutation in ref to avoid dependency issues
   const createTaskRef = useRef(createTaskMutation.mutate);
@@ -44,6 +57,33 @@ export default function NewTaskScreen() {
     }
     return statuses.find((s) => s.group === "todo") || statuses[0];
   }, [statuses, defaultStatusId]);
+
+  // Determine default task type
+  const defaultTaskType = useMemo((): { value: TaskTypeValue; icon: DatabaseIcon | null } | null => {
+    if (!defaultTaskTypeId) return null;
+
+    if (taskTypeProperty?.type === "select" && taskTypeProperty.options) {
+      const option = taskTypeProperty.options.find((o) => o.id === defaultTaskTypeId);
+      if (option) {
+        return {
+          value: { type: "select", name: option.name },
+          icon: null,
+        };
+      }
+    }
+
+    if (taskTypeProperty?.type === "relation" && taskTypeRelationOptions) {
+      const option = taskTypeRelationOptions.find((o) => o.id === defaultTaskTypeId);
+      if (option) {
+        return {
+          value: { type: "relation", pageId: option.id, displayName: option.title },
+          icon: option.icon ?? null,
+        };
+      }
+    }
+
+    return null;
+  }, [defaultTaskTypeId, taskTypeProperty, taskTypeRelationOptions]);
 
   const groupedBg = isDark ? IOS_BACKGROUNDS.grouped.dark : IOS_BACKGROUNDS.grouped.light;
   const elevatedBg = isDark ? IOS_BACKGROUNDS.elevated.dark : IOS_BACKGROUNDS.elevated.light;
@@ -99,6 +139,8 @@ export default function NewTaskScreen() {
             mode="create"
             isFullScreen={isFullScreen}
             initialStatus={defaultStatus}
+            initialTaskType={defaultTaskType?.value}
+            initialTaskTypeIcon={defaultTaskType?.icon}
             onCreateTask={handleCreateTask}
           />
         </View>

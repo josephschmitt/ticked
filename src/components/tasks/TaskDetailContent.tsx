@@ -50,6 +50,8 @@ interface TaskDetailContentProps {
   // Create mode: provide these instead
   mode?: "edit" | "create";
   initialStatus?: TaskStatus | null;
+  initialTaskType?: TaskTypeValue | null;
+  initialTaskTypeIcon?: DatabaseIcon | null;
   onCreateTask?: (params: CreateTaskParams) => void;
 }
 
@@ -65,6 +67,8 @@ export function TaskDetailContent({
   isFullScreen,
   mode: modeProp,
   initialStatus,
+  initialTaskType,
+  initialTaskTypeIcon,
   onCreateTask,
 }: TaskDetailContentProps) {
   const colorScheme = useColorScheme();
@@ -114,8 +118,8 @@ export function TaskDetailContent({
   const [localStatus, setLocalStatus] = useState<TaskStatus | null>(task?.status ?? initialStatus ?? null);
   const [localDoDate, setLocalDoDate] = useState<string | undefined>(task?.doDate);
   const [localDueDate, setLocalDueDate] = useState<string | undefined>(task?.dueDate);
-  const [localTaskType, setLocalTaskType] = useState<TaskTypeValue | null>(null);
-  const [localTaskTypeIcon, setLocalTaskTypeIcon] = useState<DatabaseIcon | null>(task?.taskTypeIcon ?? null);
+  const [localTaskType, setLocalTaskType] = useState<TaskTypeValue | null>(initialTaskType ?? null);
+  const [localTaskTypeIcon, setLocalTaskTypeIcon] = useState<DatabaseIcon | null>(task?.taskTypeIcon ?? initialTaskTypeIcon ?? null);
   const [localProject, setLocalProject] = useState<ProjectValue | null>(null);
   const [localProjectIcon, setLocalProjectIcon] = useState<DatabaseIcon | null>(task?.projectIcon ?? null);
   const [localUrl, setLocalUrl] = useState<string | undefined>(task?.url);
