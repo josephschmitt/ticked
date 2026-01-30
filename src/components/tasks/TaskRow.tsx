@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Linking, useColorScheme, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Linking, useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Circle, CheckCircle2, Link, FolderOpen, Tag } from "lucide-react-native";
 import { router } from "expo-router";
@@ -34,8 +34,6 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
   const updateStatusMutation = useUpdateTaskStatus();
   const updateCheckboxMutation = useUpdateTaskCheckbox();
 
-  const isToggling = updateStatusMutation.isPending || updateCheckboxMutation.isPending;
-
   // Content area tap - opens task detail sheet
   const handleContentPress = () => {
     Haptics.selectionAsync();
@@ -49,8 +47,6 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
 
   // Checkbox tap - toggles completion status
   const handleCheckboxPress = () => {
-    if (isToggling) return;
-
     Haptics.selectionAsync();
 
     // If there's a custom handler, use it
@@ -159,7 +155,6 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
       {/* Checkbox column - includes checkbox and optional task type icon */}
       <Pressable
         onPress={handleCheckboxPress}
-        disabled={isToggling}
         className="flex-row items-center gap-2"
         style={{
           paddingLeft: spacing.rowPaddingHorizontal * 1.25,
@@ -173,9 +168,7 @@ export function TaskRow({ task, onPress, onCheckboxPress }: TaskRowProps) {
         accessibilityState={{ checked: isComplete }}
       >
         <View className="w-6 h-6 items-center justify-center">
-          {isToggling ? (
-            <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
-          ) : isComplete ? (
+          {isComplete ? (
             <CheckCircle2 size={iconSize.large} color={checkboxColor} strokeWidth={2} />
           ) : (
             <Circle size={iconSize.large} color={checkboxColor} strokeWidth={1.5} />

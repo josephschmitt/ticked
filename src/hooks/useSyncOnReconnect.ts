@@ -42,8 +42,8 @@ export function useSyncOnReconnect() {
           // Refetch tasks to get latest server state
           if (databaseId) {
             await Promise.all([
-              queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] }),
-              queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] }),
+              queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] }),
+              queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] }),
             ]);
           }
         })
@@ -59,8 +59,8 @@ export function useSyncOnReconnect() {
 
       // Still refetch to get any server changes made while offline
       if (databaseId) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
       }
     }
   }, [isOnline, isInitialized, queueLength, queryClient, databaseId]);
@@ -98,8 +98,8 @@ export function useManualSync() {
       // Refetch tasks after sync
       if (databaseId) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] }),
-          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] }),
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] }),
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] }),
         ]);
       }
 

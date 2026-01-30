@@ -311,7 +311,7 @@ describe("useCreateTask", () => {
       await config.onMutate({ title: "New Task", status });
 
       expect(mockQueryClient.cancelQueries).toHaveBeenCalledWith({
-        queryKey: ["tasks", "db-123"],
+        queryKey: ["tasks", "db-123", "active"],
       });
     });
 
@@ -365,7 +365,7 @@ describe("useCreateTask", () => {
 
       expect(mockQueryClient.setQueryData).toHaveBeenCalled();
       const setQueryDataCall = mockQueryClient.setQueryData.mock.calls[0];
-      expect(setQueryDataCall[0]).toEqual(["tasks", "db-123"]);
+      expect(setQueryDataCall[0]).toEqual(["tasks", "db-123", "active"]);
 
       // Call the updater function to verify it adds task at beginning
       const updater = setQueryDataCall[1];
@@ -478,7 +478,7 @@ describe("useCreateTask", () => {
       config.onError(new Error("API Error"), {}, context);
 
       expect(mockQueryClient.setQueryData).toHaveBeenCalledWith(
-        ["tasks", "db-123"],
+        ["tasks", "db-123", "active"],
         previousTasks
       );
     });
@@ -545,7 +545,7 @@ describe("useCreateTask", () => {
 
       expect(mockQueryClient.setQueryData).toHaveBeenCalled();
       const call = mockQueryClient.setQueryData.mock.calls[0];
-      expect(call[0]).toEqual(["tasks", "db-123"]);
+      expect(call[0]).toEqual(["tasks", "db-123", "active"]);
 
       // Verify the updater replaces the temp task
       const updater = call[1];
@@ -603,13 +603,26 @@ describe("useCreateTask", () => {
   });
 
   describe("onSettled", () => {
-    it("invalidates queries after online success", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("invalidates queries after online success with delay", async () => {
       const config = getMutationConfig();
 
       config.onSettled({ task: createMockTask(), queued: false });
 
+      // Invalidation is delayed by 100ms to prevent UI flicker
+      expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(100);
+
       expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["tasks", "db-123"],
+        queryKey: ["tasks", "db-123", "active"],
       });
     });
 
@@ -618,18 +631,23 @@ describe("useCreateTask", () => {
 
       config.onSettled({ task: null, queued: true });
 
+      vi.advanceTimersByTime(100);
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled();
     });
 
-    it("handles undefined data gracefully by invalidating", () => {
+    it("handles undefined data gracefully by invalidating with delay", () => {
       const config = getMutationConfig();
 
       // Should not throw, and should invalidate to be safe
       config.onSettled(undefined);
 
+      // Invalidation is delayed
+      vi.advanceTimersByTime(100);
+
       // When data is undefined, we err on the side of caution and refresh
       expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["tasks", "db-123"],
+        queryKey: ["tasks", "db-123", "active"],
       });
     });
   });

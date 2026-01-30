@@ -58,8 +58,15 @@ interface UpdateUrlParams {
   url: string | null;
 }
 
+/** Type for completed tasks infinite query data */
+type CompletedTasksData = {
+  pages: Array<{ tasks: Task[]; hasMore: boolean; nextCursor: string | null }>;
+  pageParams: unknown[];
+};
+
 /**
- * Helper to update a task in the cache.
+ * Helper to update a task in the cache with proper cross-list movement.
+ * When a task's status group changes (e.g., complete <-> active), it moves between caches.
  */
 function updateTaskInCache(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -67,29 +74,106 @@ function updateTaskInCache(
   taskId: string,
   updater: (task: Task) => Task
 ) {
-  // Update main tasks cache
-  queryClient.setQueryData<Task[]>(
-    [...TASKS_QUERY_KEY, databaseId],
-    (oldTasks) => {
+  // Get the active query key (with "active" suffix)
+  const activeQueryKey = [...TASKS_QUERY_KEY, databaseId, "active"];
+  // Get the completed query key (with "completed" suffix)
+  const completedQueryKey = [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"];
+
+  // First, find the task in either cache to get the updated version
+  const activeTasks = queryClient.getQueryData<Task[]>(activeQueryKey);
+  const completedData = queryClient.getQueryData<CompletedTasksData>(completedQueryKey);
+
+  let taskFromActive = activeTasks?.find((t) => t.id === taskId);
+  let taskFromCompleted: Task | undefined;
+
+  if (completedData?.pages) {
+    for (const page of completedData.pages) {
+      const found = page.tasks.find((t) => t.id === taskId);
+      if (found) {
+        taskFromCompleted = found;
+        break;
+      }
+    }
+  }
+
+  const originalTask = taskFromActive || taskFromCompleted;
+  if (!originalTask) {
+    // Task not found in either cache, just try to update both
+    queryClient.setQueryData<Task[]>(activeQueryKey, (oldTasks) => {
       if (!oldTasks) return oldTasks;
       return oldTasks.map((t) => (t.id === taskId ? updater(t) : t));
-    }
-  );
+    });
+    return;
+  }
 
-  // Update completed tasks cache (infinite query format)
-  queryClient.setQueryData(
-    [...COMPLETED_TASKS_QUERY_KEY, databaseId],
-    (oldData: { pages: Array<{ tasks: Task[]; hasMore: boolean; nextCursor: string | null }> } | undefined) => {
+  const updatedTask = updater(originalTask);
+  const wasComplete = originalTask.status.group === "complete";
+  const isNowComplete = updatedTask.status.group === "complete";
+
+  // Case 1: Task is moving from active to completed
+  if (!wasComplete && isNowComplete) {
+    // Remove from active list
+    queryClient.setQueryData<Task[]>(activeQueryKey, (oldTasks) => {
+      if (!oldTasks) return oldTasks;
+      return oldTasks.filter((t) => t.id !== taskId);
+    });
+
+    // Add to completed list (at the beginning of the first page)
+    queryClient.setQueryData<CompletedTasksData>(completedQueryKey, (oldData) => {
+      if (!oldData?.pages?.length) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page, index) => {
+          if (index === 0) {
+            return { ...page, tasks: [updatedTask, ...page.tasks] };
+          }
+          return page;
+        }),
+      };
+    });
+  }
+  // Case 2: Task is moving from completed to active
+  else if (wasComplete && !isNowComplete) {
+    // Remove from completed list
+    queryClient.setQueryData<CompletedTasksData>(completedQueryKey, (oldData) => {
       if (!oldData?.pages) return oldData;
       return {
         ...oldData,
         pages: oldData.pages.map((page) => ({
           ...page,
-          tasks: page.tasks.map((t) => (t.id === taskId ? updater(t) : t)),
+          tasks: page.tasks.filter((t) => t.id !== taskId),
         })),
       };
+    });
+
+    // Add to active list (at the beginning)
+    queryClient.setQueryData<Task[]>(activeQueryKey, (oldTasks) => {
+      if (!oldTasks) return [updatedTask];
+      return [updatedTask, ...oldTasks];
+    });
+  }
+  // Case 3: Task stays in the same list, just update it
+  else {
+    if (!wasComplete) {
+      // Update in active list
+      queryClient.setQueryData<Task[]>(activeQueryKey, (oldTasks) => {
+        if (!oldTasks) return oldTasks;
+        return oldTasks.map((t) => (t.id === taskId ? updatedTask : t));
+      });
+    } else {
+      // Update in completed list
+      queryClient.setQueryData<CompletedTasksData>(completedQueryKey, (oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            tasks: page.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
+          })),
+        };
+      });
     }
-  );
+  }
 }
 
 /**
@@ -126,12 +210,12 @@ export function useUpdateTaskStatus() {
     },
     onMutate: async ({ task, newStatus }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
       // Snapshot previous value
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       // Optimistically update
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
@@ -144,18 +228,21 @@ export function useUpdateTaskStatus() {
     onError: (_error, _variables, context) => {
       // Rollback on error
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update status", "error");
     },
     onSettled: (_data) => {
       // Only refetch if not queued (online mutation)
+      // Delay invalidation slightly to prevent UI flicker from optimistic update
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -196,11 +283,11 @@ export function useUpdateTaskCheckbox() {
       return { task, checked, queued: false };
     },
     onMutate: async ({ task, checked }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       // Create checkbox status
       const newStatus: TaskStatus = checked
@@ -216,17 +303,19 @@ export function useUpdateTaskCheckbox() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update status", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -262,11 +351,11 @@ export function useUpdateTaskTitle() {
       return { task, newTitle, queued: false };
     },
     onMutate: async ({ task, newTitle }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
         ...t,
@@ -277,17 +366,19 @@ export function useUpdateTaskTitle() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update title", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -329,11 +420,11 @@ export function useUpdateTaskDate() {
       return { task, field, date, queued: false };
     },
     onMutate: async ({ task, field, date }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
         ...t,
@@ -344,17 +435,19 @@ export function useUpdateTaskDate() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update date", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -392,11 +485,11 @@ export function useUpdateTaskSelect() {
       return { task, field, optionName, queued: false };
     },
     onMutate: async ({ task, field, optionName }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
         ...t,
@@ -407,17 +500,19 @@ export function useUpdateTaskSelect() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update field", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -455,11 +550,11 @@ export function useUpdateTaskRelation() {
       return { task, field, pageIds, queued: false };
     },
     onMutate: async ({ task, field, displayName }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
         ...t,
@@ -470,17 +565,19 @@ export function useUpdateTaskRelation() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update field", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });
@@ -517,11 +614,11 @@ export function useUpdateTaskUrl() {
       return { task, url, queued: false };
     },
     onMutate: async ({ task, url }) => {
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+      await queryClient.cancelQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
 
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
-      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
+      const previousCompleted = queryClient.getQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"]);
 
       updateTaskInCache(queryClient, databaseId, task.id, (t) => ({
         ...t,
@@ -532,17 +629,19 @@ export function useUpdateTaskUrl() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       if (context?.previousCompleted) {
-        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId], context.previousCompleted);
+        queryClient.setQueryData([...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"], context.previousCompleted);
       }
       showToast("Failed to update URL", "error");
     },
     onSettled: (_data) => {
       if (!_data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
-        queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+          queryClient.invalidateQueries({ queryKey: [...COMPLETED_TASKS_QUERY_KEY, databaseId, "completed"] });
+        }, 100);
       }
     },
   });

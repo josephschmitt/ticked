@@ -27,17 +27,18 @@ function findTaskInCache(
   taskId: string,
   databaseId: string
 ): Task | undefined {
-  // First, check the main tasks cache
-  const tasksData = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
+  // First, check the active tasks cache (note the "active" suffix)
+  const tasksData = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
   if (tasksData) {
     const task = tasksData.find((t) => t.id === taskId);
     if (task) return task;
   }
 
-  // Also check the completed tasks infinite query cache
+  // Also check the completed tasks infinite query cache (note the "completed" suffix)
   const completedData = queryClient.getQueryData<InfiniteQueryData>([
     ...COMPLETED_TASKS_QUERY_KEY,
     databaseId,
+    "completed",
   ]);
   if (completedData?.pages) {
     for (const page of completedData.pages) {
@@ -71,7 +72,7 @@ export function useTask(taskId: string | undefined): UseTaskResult {
       const unsubscribe = queryClient.getQueryCache().subscribe(callback);
       return unsubscribe;
     },
-    () => queryClient.getQueryCache().find({ queryKey: [...TASKS_QUERY_KEY, databaseId] })?.state.dataUpdatedAt ?? 0,
+    () => queryClient.getQueryCache().find({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] })?.state.dataUpdatedAt ?? 0,
     () => 0
   );
 

@@ -31,15 +31,16 @@ export interface CreateTaskParams {
 
 /**
  * Helper to add a task to the query cache.
+ * New tasks always go to the active list (with "active" suffix).
  */
 function addTaskToCache(
   queryClient: ReturnType<typeof useQueryClient>,
   databaseId: string | null,
   task: Task
 ) {
-  // Add to main tasks cache at the beginning
+  // Add to active tasks cache at the beginning (note the "active" suffix)
   queryClient.setQueryData<Task[]>(
-    [...TASKS_QUERY_KEY, databaseId],
+    [...TASKS_QUERY_KEY, databaseId, "active"],
     (oldTasks) => {
       if (!oldTasks) return [task];
       return [task, ...oldTasks];
@@ -57,7 +58,7 @@ function replaceTaskIdInCache(
   realTask: Task
 ) {
   queryClient.setQueryData<Task[]>(
-    [...TASKS_QUERY_KEY, databaseId],
+    [...TASKS_QUERY_KEY, databaseId, "active"],
     (oldTasks) => {
       if (!oldTasks) return oldTasks;
       return oldTasks.map((t) => (t.id === tempId ? realTask : t));
@@ -163,10 +164,10 @@ export function useCreateTask() {
       const { title, status, doDate, dueDate, taskType, taskTypeIcon, project, projectIcon, url } = params;
 
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+      await queryClient.cancelQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
 
       // Snapshot previous value for rollback
-      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId]);
+      const previousTasks = queryClient.getQueryData<Task[]>([...TASKS_QUERY_KEY, databaseId, "active"]);
 
       // Generate temp ID for optimistic update
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -219,7 +220,7 @@ export function useCreateTask() {
       console.error("Failed to create task:", _error);
       // Rollback on error
       if (context?.previousTasks) {
-        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId], context.previousTasks);
+        queryClient.setQueryData([...TASKS_QUERY_KEY, databaseId, "active"], context.previousTasks);
       }
       showToast("Failed to create task", "error");
     },
@@ -234,8 +235,11 @@ export function useCreateTask() {
     },
     onSettled: (data) => {
       // Only invalidate if not queued (online mutation)
+      // Delay to prevent UI flicker from optimistic update
       if (!data?.queued) {
-        queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId] });
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [...TASKS_QUERY_KEY, databaseId, "active"] });
+        }, 100);
       }
     },
   });
